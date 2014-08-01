@@ -1,0 +1,62 @@
+:archives:
+  :binutils:
+    :uri: http://ftp.gnu.org/gnu/binutils/binutils-2.24.tar.bz2
+    :md5: e0f71a7b2ddab0f8612336ac81d9636b
+    :sha: e5e8c5be9664e7f7f96e0d09919110ab5ad597794f5b1809871177a0f0f14137
+    :size: 22716802
+    :config_flags:
+    - --enable-static
+    - --disable-shared
+    - --target x86_64-pc-elf
+    - CFLAGS="-w -g -O2"
+
+  :gcc:
+    :uri: http://gcc.cybermirror.org/releases/gcc-4.9.1/gcc-4.9.1.tar.bz2
+    :md5: fddf71348546af523353bd43d34919c1
+    :sha: d334781a124ada6f38e63b545e2a3b8c2183049515a1abab6d513f109f1d717e
+    :size: 89854120
+    :config_flags:
+    - --enable-static
+    - --enable-languages=c
+    - --disable-lto
+    - --disable-shared
+    - --disable-libssp
+    - --disable-libquadmath
+    - --target x86_64-pc-elf
+    - --with-gmp=@PREFIX@
+    - --with-mpfr=@PREFIX@
+    - --with-mpc=@PREFIX@
+    :deps:
+    - :binutils
+    - :gmp
+    - :mpfr
+    - :mpc
+
+  :gmp:
+    :uri: https://gmplib.org/download/gmp/gmp-5.1.3.tar.bz2
+    :md5: a082867cbca5e898371a97bb27b31fea
+    :sha: 752079520b4690531171d0f4532e40f08600215feefede70b24fabdc6f1ab160
+    :size: 2196480
+
+  :mpfr:
+    :uri: http://www.mpfr.org/mpfr-current/mpfr-3.1.2.tar.bz2
+    :md5: ee2c3ac63bf0c2359bf08fc3ee094c19
+    :sha: 79c73f60af010a30a5c27a955a1d2d01ba095b72537dab0ecaad57f5a7bb1b6b
+    :size: 1225496
+    :config_flags:
+    - --with-gmp=@PREFIX@
+    :deps:
+    - :gmp
+
+  :mpc:
+    :uri: http://www.multiprecision.org/mpc/download/mpc-1.0.2.tar.gz
+    :md5: 68fadff3358fb3e7976c7a398a0af4c3
+    :sha: b561f54d8a479cee3bc891ee52735f18ff86712ba30f036f8b8537bae380c488
+    :size: 633173
+    :config_flags:
+    - --with-gmp=@PREFIX@
+    - --with-mpfr=@PREFIX@
+    :deps:
+    - :gmp
+    - :mpfr
+

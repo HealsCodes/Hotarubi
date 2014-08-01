@@ -1,0 +1,43 @@
+:INCLUDE: &INCLUDE
+  - -I include
+
+:CFLAGS_base: &CFLAGS_base
+  - -O2
+  - -Wall
+  - -Wextra
+  - -Wpointer-arith
+  - -Wcast-align
+  - -Wwrite-strings
+  - -Wno-long-long
+  - -Wno-variadic-macros
+  - -ffreestanding
+  - -fno-stack-protector
+  - -std=gnu99
+  - -mno-mmx
+  - -mno-sse
+  - -mno-sse2
+  - -mno-sse3
+  - -mno-ssse3
+  - -mno-sse4
+  - -mno-sse4.1
+  - -mno-sse4.2
+  - *INCLUDE
+
+:CFLAGS_32:
+  - -m32
+  - -D__32BITS__
+  - *CFLAGS_base
+
+:CFLAGS_64:
+  - -m64
+  - -mcmodel=kernel
+  - -mno-red-zone
+  - *CFLAGS_base
+  
+:LDFLAGS:
+  - -Tscripts/link.ld
+  - -nostdlib
+  - -nostartfiles
+  - -z max-page-size=0x1000
+  - -Map Symbols.map
+
