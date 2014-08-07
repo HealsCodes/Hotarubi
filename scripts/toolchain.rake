@@ -161,7 +161,7 @@ def cc_compile( source, target, **options )
   use32 = options.delete( :use32 ) || false
 
   include_paths = [ "-I #{File.dirname( source )}" ]
-  if File.extname( source ) =~ /\.(cpp|hpp)/
+  if File.extname( source ) =~ /\.(cpp|cc|hpp)/
     compiler      = TC[ :cxx ]
     compile_flags = include_paths + TC_FLAGS[ ( use32 ? :CXXFLAGS_32 : :CXXFLAGS_64 ) ].flatten
   else
