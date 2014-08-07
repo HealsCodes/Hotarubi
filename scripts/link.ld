@@ -42,7 +42,6 @@ SECTIONS {
 		*(.text* .gnu.linkonce.t*)
 		*(.rodata* .gnu.linkonce.r*)
 
-		KEEP (*(.jcr*))
 		__etext = .;
 	}
 	.data ALIGN(4096) : AT(ADDR(.data) - KERNEL_VMA) {
@@ -50,7 +49,7 @@ SECTIONS {
 		*(EXCLUDE_FILE(src/kernel/boot.o) .data)
 
 		*(.data* .gnu.linkonce.d*)
-		*(.eh_frame*)
+		
 		__edata = .;
 	}
 	.bss  ALIGN(4096) : AT(ADDR(.bss) - KERNEL_VMA) {
@@ -72,6 +71,8 @@ SECTIONS {
 	/DISCARD/ : {
 		*(.note*)
 		*(.comment)
+		*(.eh_frame*)
+		*(.jcr*)
 		*(.gnu_debuglink)
 	}
 }
