@@ -1,7 +1,0 @@
----
-:cc: toolchain/bin/x86_64-pc-elf-gcc
-:as: toolchain/bin/x86_64-pc-elf-as
-:ld: toolchain/bin/x86_64-pc-elf-ld
-:oc: toolchain/bin/x86_64-pc-elf-objcopy
-:od: toolchain/bin/x86_64-pc-elf-objdump
-:nm: toolchain/bin/x86_64-pc-elf-nm

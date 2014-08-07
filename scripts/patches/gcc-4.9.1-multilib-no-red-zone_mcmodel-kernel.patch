@@ -1,0 +1,61 @@
+diff -Nrdup gcc-4.9.1.orig/gcc/config/i386/t-x86_64-elf gcc-4.9.1/gcc/config/i386/t-x86_64-elf
+--- /dev/null	1970-01-01 01:00:00.000000000 +0100
++++ gcc-4.9.1/gcc/config/i386/t-x86_64-elf	2014-08-04 23:32:35.000000000 +0200
+@@ -0,0 +1,6 @@
++# Add red-zone less libgcc
++# patch based on https://github.com/gdboot/toolchains/blob/master/gcc-patches/
++
++MULTILIB_OPTIONS += mno-red-zone
++MULTILIB_DIRNAMES += no-red-zone
++
+diff -Nrdup gcc-4.9.1.orig/gcc/config.gcc gcc-4.9.1/gcc/config.gcc
+--- gcc-4.9.1.orig/gcc/config.gcc	2014-06-16 10:15:35.000000000 +0200
++++ gcc-4.9.1/gcc/config.gcc	2014-08-04 23:08:09.000000000 +0200
+@@ -1343,6 +1343,7 @@ i[34567]86-*-elf*)
+ 	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h"
+ 	;;
+-x86_64-*-elf*)
++x86_64-*-elf* | x86_64*-elf*)
++	tmake_file="${tmake_file} i386/t-x86_64-elf"
+ 	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h i386/x86-64.h"
+ 	;;
+ i[34567]86-*-rdos*)
+diff -Nrdup gcc-4.9.1.orig/libgcc/config/i386/t-x86_64-elf gcc-4.9.1/libgcc/config/i386/t-x86_64-elf
+--- gcc-4.9.1.orig/libgcc/config/i386/t-x86_64-elf	1970-01-01 01:00:00.000000000 +0100
++++ gcc-4.9.1/libgcc/config/i386/t-x86_64-elf	2014-08-04 23:32:48.000000000 +0200
+@@ -0,0 +1 @@
++CRTSTUFF_T_CFLAGS += -mcmodel=kernel
+diff -Nrdup gcc-4.9.1.orig/libgcc/config.target gcc-4.9.1/libgcc/config.target
+--- /dev/null	1970-01-01 01:00:00.000000000 +0100
++++ gcc-4.9.1/libgcc/config.target	2014-08-04 23:31:14.000000000 +0200
+@@ -0,0 +1,6 @@
++
++case ${target} in
++x86_64-*-elf* | x86_64*-elf*)
++	tmake_file="$tmake_file i386/t-crtstuff i386/t-x86_64-elf"
++	;;
++esac
+diff -Nrdup gcc-4.9.1.orig/libgcc/configure gcc-4.9.1/libgcc/configure
+--- gcc-4.9.1.orig/libgcc/configure	2014-02-07 08:46:34.000000000 +0100
++++ gcc-4.9.1/libgcc/configure	2014-08-04 23:29:17.000000000 +0200
+@@ -4356,6 +4356,8 @@ esac
+ 
+ # Collect host-machine-specific information.
+ . ${srcdir}/config.host
++# Collect target-machine-specific information.
++. ${srcdir}/config.target
+ 
+ # Check if Solaris/x86 linker supports ZERO terminator unwind entries.
+ # This is after config.host so we can augment tmake_file.
+diff -Nrdup gcc-4.9.1.orig/libgcc/configure.ac gcc-4.9.1/libgcc/configure.ac
+--- gcc-4.9.1.orig/libgcc/configure.ac	2014-02-07 08:46:34.000000000 +0100
++++ gcc-4.9.1/libgcc/configure.ac	2014-08-04 23:28:59.000000000 +0200
+@@ -306,6 +306,8 @@ esac
+ 
+ # Collect host-machine-specific information.
+ . ${srcdir}/config.host
++# Collect target-machine-specific information.
++. ${srcdir}/config.target
+ 
+ # Check if Solaris/x86 linker supports ZERO terminator unwind entries.
+ # This is after config.host so we can augment tmake_file.

@@ -7,22 +7,40 @@
     :config_flags:
     - --enable-static
     - --disable-shared
-    - --target x86_64-pc-elf
+    - --disable-nls
+    - --target x86_64-elf
     - CFLAGS="-w -g -O2"
+
+  :nasm:
+    :uri: http://www.nasm.us/pub/nasm/releasebuilds/2.11.05/nasm-2.11.05.tar.bz2
+    :md5: f6b1db2858cad82bbb0c8c6f3e2b0fb2
+    :sha: 4a417bcf5cde5d203e228feea3f428a6ff4d700d558e4d79d50a30a695bdfae9
+    :size: 905742
+    :optional:
+    :patches:
+    - nasm-2.11.05-build-out-of-source.patch
+    :config_flags:
+    - --enable-static
+    - --disable-shared
+    - --disable-nls
 
   :gcc:
     :uri: http://gcc.cybermirror.org/releases/gcc-4.9.1/gcc-4.9.1.tar.bz2
     :md5: fddf71348546af523353bd43d34919c1
     :sha: d334781a124ada6f38e63b545e2a3b8c2183049515a1abab6d513f109f1d717e
     :size: 89854120
+    :targets: [ all-gcc, all-target-libgcc, install-gcc, install-target-libgcc ]
+    :patches:
+    - gcc-4.9.1-multilib-no-red-zone_mcmodel-kernel.patch
     :config_flags:
     - --enable-static
-    - --enable-languages=c
+    - --enable-languages=c,c++
+    - --disable-nls
     - --disable-lto
-    - --disable-shared
     - --disable-libssp
     - --disable-libquadmath
-    - --target x86_64-pc-elf
+    - --disable-shared
+    - --target x86_64-elf
     - --with-gmp=@PREFIX@
     - --with-mpfr=@PREFIX@
     - --with-mpc=@PREFIX@
@@ -49,7 +67,7 @@
     - :gmp
 
   :mpc:
-    :uri: http://www.multiprecision.org/mpc/download/mpc-1.0.2.tar.gz
+    :uri: http://ftpmirror.gnu.org/mpc/mpc-1.0.2.tar.gz
     :md5: 68fadff3358fb3e7976c7a398a0af4c3
     :sha: b561f54d8a479cee3bc891ee52735f18ff86712ba30f036f8b8537bae380c488
     :size: 633173

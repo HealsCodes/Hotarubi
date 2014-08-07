@@ -1,0 +1,62 @@
+diff -rdup nasm-2.11.05.orig/Makefile.in nasm-2.11.05/Makefile.in
+--- nasm-2.11.05.orig/Makefile.in	2014-05-21 17:44:32.000000000 +0200
++++ nasm-2.11.05/Makefile.in	2014-08-03 17:09:50.000000000 +0200
+@@ -7,6 +7,8 @@
+ # distributed in the NASM archive.
+ 
+ top_srcdir	= @top_srcdir@
++top_builddir	= @top_builddir@
++builddir	= @builddir@
+ srcdir		= @srcdir@
+ VPATH		= @srcdir@
+ prefix		= @prefix@
+@@ -18,7 +20,7 @@ datarootdir	= @datarootdir@
+ CC		= @CC@
+ CFLAGS		= @CFLAGS@
+ BUILD_CFLAGS	= $(CFLAGS) @DEFS@
+-INTERNAL_CFLAGS = -I$(srcdir) -I.
++INTERNAL_CFLAGS = -I$(srcdir) -I$(top_builddir)
+ ALL_CFLAGS	= $(BUILD_CFLAGS) $(INTERNAL_CFLAGS)
+ LDFLAGS		= @LDFLAGS@
+ LIBS		= @LIBS@
+@@ -98,7 +100,7 @@ NDISASM = ndisasm.$(O) disasm.$(O) sync.
+ 	disp8.$(O) iflag.$(O)
+ #-- End File Lists --#
+ 
+-all: nasm$(X) ndisasm$(X) manpages rdf
++all: dirs nasm$(X) ndisasm$(X) manpages rdf
+ 
+ nasm$(X): $(NASM) $(XOBJS)
+ 	$(CC) $(LDFLAGS) -o nasm$(X) $(NASM) $(XOBJS) $(LIBS)
+@@ -106,6 +108,9 @@ nasm$(X): $(NASM) $(XOBJS)
+ ndisasm$(X): $(NDISASM) $(XOBJS)
+ 	$(CC) $(LDFLAGS) -o ndisasm$(X) $(NDISASM) $(XOBJS) $(LIBS)
+ 
++dirs:
++	$(MKDIR) -p lib output
++
+ # These source files are automagically generated from a single
+ # instruction-table file by a Perl script. They're distributed,
+ # though, so it isn't necessary to have Perl just to recompile NASM
+diff -rdup nasm-2.11.05.orig/rdoff/Makefile.in nasm-2.11.05/rdoff/Makefile.in
+--- nasm-2.11.05.orig/rdoff/Makefile.in	2014-05-21 17:44:06.000000000 +0200
++++ nasm-2.11.05/rdoff/Makefile.in	2014-08-03 17:10:02.000000000 +0200
+@@ -8,7 +8,9 @@
+ # distributed in the NASM archive.
+ 
+ top_srcdir	= @top_srcdir@
++top_builddir	= @top_builddir@
+ srcdir		= @srcdir@
++builddir	= @builddir@
+ VPATH		= @srcdir@
+ prefix		= @prefix@
+ exec_prefix	= @exec_prefix@
+@@ -19,7 +21,7 @@ datarootdir	= @datarootdir@
+ CC		= @CC@
+ CFLAGS		= @CFLAGS@
+ BUILD_CFLAGS	= $(CFLAGS) @DEFS@
+-INTERNAL_CFLAGS = -I$(srcdir) -I$(top_srcdir)
++INTERNAL_CFLAGS = -I$(srcdir) -I$(top_srcdir) -I$(top_builddir) -I$(builddir)
+ ALL_CFLAGS	= $(BUILD_CFLAGS) $(INTERNAL_CFLAGS)
+ LDFLAGS		= @LDFLAGS@
+ 
