@@ -36,9 +36,13 @@ SECTIONS {
 
 		KEEP (*(.init))
 		KEEP (*(.fini))
+		KEEP (*(SORT(.ctors.*)))
+		KEEP (*(SORT(.dtors.*)))
 
 		*(.text* .gnu.linkonce.t*)
 		*(.rodata* .gnu.linkonce.r*)
+
+		KEEP (*(.jcr*))
 		__etext = .;
 	}
 	.data ALIGN(4096) : AT(ADDR(.data) - KERNEL_VMA) {
