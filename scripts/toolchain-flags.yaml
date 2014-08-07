@@ -12,7 +12,6 @@
   - -Wno-variadic-macros
   - -ffreestanding
   - -fno-stack-protector
-  - -std=gnu99
   - -mno-mmx
   - -mno-sse
   - -mno-sse2
@@ -26,18 +25,38 @@
 :CFLAGS_32:
   - -m32
   - -D__32BITS__
+  - -std=gnu11
   - *CFLAGS_base
 
 :CFLAGS_64:
   - -m64
   - -mcmodel=kernel
   - -mno-red-zone
+  - -std=gnu11
   - *CFLAGS_base
-  
+
+:CXXFLAGS_32:
+  - -m32
+  - -std=gnu++11
+  - -fno-exceptions
+  - -fno-rtti
+  - *CFLAGS_base
+
+:CXXFLAGS_64:
+  - -m64
+  - -mcmodel=kernel
+  - -mno-red-zone
+  - -std=gnu++11
+  - -fno-exceptions
+  - -fno-rtti
+  - *CFLAGS_base
+
 :LDFLAGS:
   - -Tscripts/link.ld
   - -nostdlib
-  - -nostartfiles
-  - -z max-page-size=0x1000
-  - -Map Symbols.map
+  - -m64
+  - -mcmodel=kernel
+  - -mno-red-zone
+  - -Wl,-z -Wl,max-page-size=0x1000
+  - -Wl,-Map -Wl,Symbols.map
 
