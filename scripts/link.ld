@@ -1,6 +1,6 @@
- /* 
-  * linker script for x86_64 target
-  */
+/* 
+ * linker script for x86_64 target
+ */
 
 /*OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64", "elf64-x86-64")*/
 /*OUTPUT_ARCH(i386:x86-64)*/
@@ -19,10 +19,10 @@ SECTIONS {
 		 * and doesn't really know about 64bit or virtual addresses
 		 */
 
-		KEEP (src/kernel/boot.o (.multiboot))
-		KEEP (src/kernel/boot.o (.text))
-		KEEP (src/kernel/boot.o (.data))
-		KEEP (src/kernel/boot.o (.bss))
+		KEEP (kernel/boot.o (.multiboot))
+		KEEP (kernel/boot.o (.text))
+		KEEP (kernel/boot.o (.data))
+		KEEP (kernel/boot.o (.bss))
 
 		__ebootstrap = .;
 	}
@@ -32,7 +32,7 @@ SECTIONS {
 
 	.text : AT(ADDR(.text) - KERNEL_VMA) {
 		__text = .;
-		*(EXCLUDE_FILE(src/kernel/boot.o) .text)
+		*(EXCLUDE_FILE(kernel/boot.o) .text)
 
 		KEEP (*(.init))
 		KEEP (*(.fini))
@@ -46,7 +46,7 @@ SECTIONS {
 	}
 	.data ALIGN(4096) : AT(ADDR(.data) - KERNEL_VMA) {
 		__data = .;
-		*(EXCLUDE_FILE(src/kernel/boot.o) .data)
+		*(EXCLUDE_FILE(kernel/boot.o) .data)
 
 		*(.data* .gnu.linkonce.d*)
 		
@@ -60,7 +60,7 @@ SECTIONS {
 		. = . + 4096;
 		__boot_stack_top = .;
 
-		*(EXCLUDE_FILE(src/kernel/boot.o) .bss)
+		*(EXCLUDE_FILE(kernel/boot.o) .bss)
 
 		*(.bss* .gnu.linkonce.b*)
 		*(.COMMON*)

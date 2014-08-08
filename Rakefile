@@ -7,27 +7,27 @@ Dir.glob( './scripts/**/*.rake' ).each { |rake_ext| import rake_ext }
 # rake defaults
 task :default => :kernel
 
-desc "Build hotaru.elf"
-task :kernel => 'hotaru.elf' do
+desc "Build hotarubi.elf"
+task :kernel => 'hotarubi.elf' do
   puts "Ready."
 end
 
 # collect sources and options files
-SOURCES    = FileList.new( 'src/**/*.c', 'src/**/*.cc', 'src/**/*.S' )
+SOURCES    = FileList.new( 'kernel/**/*.c', 'kernel/**/*.cc', 'kernel/**/*.S' )
 SOURCES_64 = FileList.new( SOURCES )
 SOURCES_32 = FileList.new
 OBJECTS    = SOURCES.ext( '.o' )
 DEPENDS    = SOURCES.ext( '.d' )
 
 # split sources into 64bit and 32bit
-Dir.glob( 'src/**/options.yaml' ).each do |option_file|
+Dir.glob( 'kernel/**/options.yaml' ).each do |option_file|
   { :sources_32 => [] }.merge( YAML::load_file( option_file ) )[ :sources_32 ].each do |src|
     SOURCES_32 << SOURCES_64.delete( "#{File.dirname( option_file )}/#{src}" )
   end
 end
 
 # file targets for kernel and *.o
-file 'hotaru.elf' => [ *OBJECTS, 'Rakefile', 'scripts/link.ld' ] do |t|
+file 'hotarubi.elf' => [ *OBJECTS, 'Rakefile', 'scripts/link.ld' ] do |t|
   cc_link( OBJECTS, t.name.ext( '.elf64' ) )
   cc_64to32( t.name.ext( '.elf64' ), t.name, :cleanup => true )
 end
@@ -62,5 +62,5 @@ CLEAN.include( '**/*.elf32' )
 CLEAN.include( '**/*.elf64' )
 CLEAN.include( '.depends.mf' )
 
-CLOBBER.include( 'hotaru.elf' )
+CLOBBER.include( 'hotarubi.elf' )
 CLOBBER.include( 'Symbols.map' )

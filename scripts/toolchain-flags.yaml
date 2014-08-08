@@ -1,5 +1,5 @@
 :INCLUDE: &INCLUDE
-  - -I include
+  - -I kernel/include
 
 :CFLAGS_base: &CFLAGS_base
   - -O2
