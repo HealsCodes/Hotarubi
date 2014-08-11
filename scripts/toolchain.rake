@@ -18,6 +18,8 @@ TC = {
 }
 TC.merge!( YAML::load_file( 'toolchain.yaml' ) ) if File.exists?( 'toolchain.yaml' )
 
+TC_RELEASE=`git log -1 --pretty=format:%h scripts/toolchain-meta.yaml scripts/toolchain.rake scripts/patches`
+
 namespace :toolchain do
   desc "Build the host toolchain and required dependencies (defined in toolchain-meta.yaml)."
   task :build do
@@ -34,6 +36,13 @@ namespace :toolchain do
   task :clobber do
     _CLOBBER = FileList.new << "toolchain"
     rm_r( _CLOBBER, :force => true )
+  end
+
+  desc "Create a tar archive of the toolchain binaries"
+  task :archive => ['toolchain:build', 'toolchain:clean'] do
+    Dir.chdir( 'toolchain' ) do
+      sh "tar -cjf ../toolchain-#{RUBY_PLATFORM}-#{TC_RELEASE}.tar.bz2 ."
+    end
   end
 
   case RUBY_PLATFORM
