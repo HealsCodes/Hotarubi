@@ -32,7 +32,7 @@
     :targets: [ all-gcc, all-target-libgcc, install-gcc, install-target-libgcc ]
     :patches:
     - gcc-4.9.1-multilib-no-red-zone.patch
-    - gcc-4.9.1-crtstuff-for-mcmodel-kernel.patch
+    - gcc-4.9.1-crtstuff-add-kernel-variant.patch
     - gcc-4.9.1-crtstuff-disable-eh-tmc-and-java.patch
     :config_flags:
     - --enable-static

@@ -180,6 +180,7 @@ end
 
 def cc_link( sources, target, **options )
   # provide some defaults
+  crtsuffix = options.has_key?( :kernel ) ? '-kernel' : ''
   link_flags = TC_FLAGS[ :LDFLAGS ].flatten.join( ' ' )
   defaults = {
     :crtbegin => '',
@@ -190,10 +191,10 @@ def cc_link( sources, target, **options )
   # check for crti / crte and create the required linker context for them
   Array.new( sources ).each do |source|
     if File.basename( source ) == 'crti.o'
-      defaults[ :crtbegin ] = "#{source} #{`#{TC[ :cc ]} #{link_flags} -print-file-name=crtbegin.o`.chomp}"
+      defaults[ :crtbegin ] = "#{source} #{`#{TC[ :cc ]} #{link_flags} -print-file-name=crtbegin#{crtsuffix}.o`.chomp}"
       sources.delete( source )
     elsif File.basename( source ) == 'crtn.o'
-      defaults[ :crtend ] = "-lgcc #{`#{TC[ :cc ]} #{link_flags} -print-file-name=crtend.o`.chomp} #{source}"
+      defaults[ :crtend ] = "-lgcc #{`#{TC[ :cc ]} #{link_flags} -print-file-name=crtend#{crtsuffix}.o`.chomp} #{source}"
       sources.delete( source )
     end
   end

@@ -1,0 +1,39 @@
+diff -Nrdup gcc-4.9.1.orig/libgcc/config.host gcc-4.9.1/libgcc/config.host
+--- gcc-4.9.1.orig/libgcc/config.host	2014-03-27 16:40:31.000000000 +0100
++++ gcc-4.9.1/libgcc/config.host	2014-08-11 13:47:56.177002798 +0200
+@@ -297,7 +297,7 @@ case ${host} in
+   tmake_file=t-vxworks
+   ;;
+ *-*-elf)
+-  extra_parts="crtbegin.o crtend.o"
++  extra_parts="crtbegin.o crtend.o crtbegin-kernel.o crtend-kernel.o"
+   ;;
+ esac
+ 
+diff -Nrdup gcc-4.9.1.orig/libgcc/Makefile.in gcc-4.9.1/libgcc/Makefile.in
+--- gcc-4.9.1.orig/libgcc/Makefile.in	2014-01-08 17:37:08.000000000 +0100
++++ gcc-4.9.1/libgcc/Makefile.in	2014-08-11 13:44:53.170299267 +0200
+@@ -289,6 +289,9 @@ CRTSTUFF_CFLAGS = -O2 $(GCC_CFLAGS) $(IN
+ # Extra flags to use when compiling crt{begin,end}.o.
+ CRTSTUFF_T_CFLAGS =
+ 
++# Options to use when compiling crtbegin/end for in-kernel usage.
++CRTSTUFF_T_KERNEL_CFLAGS = $(CRTSTUFF_T_CFLAGS) -mcmodel=kernel
++
+ MULTIDIR := $(shell $(CC) $(CFLAGS) -print-multi-directory)
+ MULTIOSDIR := $(shell $(CC) $(CFLAGS) -print-multi-os-directory)
+ 
+@@ -982,6 +985,13 @@ crtbeginS$(objext): $(srcdir)/crtstuff.c
+ crtendS$(objext): $(srcdir)/crtstuff.c
+ 	$(crt_compile) $(CRTSTUFF_T_CFLAGS_S) -c $< -DCRT_END -DCRTSTUFFS_O
+ 
++# These are versions of crtbegin and crtend for in-kernel use.
++crtbegin-kernel$(objext): $(srcdir)/crtstuff.c
++	$(crt_compile) $(CRTSTUFF_T_KERNEL_CFLAGS) -c $< -DCRT_BEGIN -DIN_KERNEL
++
++crtend-kernel$(objext): $(srcdir)/crtstuff.c
++	$(crt_compile) $(CRTSTUFF_T_KERNEL_CFLAGS) -c $< -DCRT_END -DIN_KERNEL
++
+ # This is a version of crtbegin for -static links.
+ crtbeginT$(objext): $(srcdir)/crtstuff.c
+ 	$(crt_compile) $(CRTSTUFF_T_CFLAGS) -c $< -DCRT_BEGIN -DCRTSTUFFT_O

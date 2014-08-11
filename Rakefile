@@ -28,7 +28,7 @@ end
 
 # file targets for kernel and *.o
 file 'hotarubi.elf' => [ *OBJECTS, 'Rakefile', 'scripts/link.ld' ] do |t|
-  cc_link( OBJECTS, t.name.ext( '.elf64' ) )
+  cc_link( OBJECTS, t.name.ext( '.elf64' ), :kernel => true )
   cc_64to32( t.name.ext( '.elf64' ), t.name, :cleanup => true )
 end
 
