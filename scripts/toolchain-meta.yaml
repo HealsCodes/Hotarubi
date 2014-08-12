@@ -8,8 +8,8 @@
     - --enable-static
     - --disable-shared
     - --disable-nls
+    - --disable-werror
     - --target x86_64-elf
-    - CFLAGS="-w -g -O2"
 
   :nasm:
     :uri: http://www.nasm.us/pub/nasm/releasebuilds/2.11.05/nasm-2.11.05.tar.bz2

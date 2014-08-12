@@ -19,7 +19,7 @@ branches:
   only:
   - master
 env:
-- RVM_VERSION=2.0.0 LANG="en_US.UTF-8" GIT_TC_RELEASE="`git log -1 --pretty='format:%h' scripts/toolchain-meta.yaml scripts/patches`" GIT_SHORT_REV="`git log -1 --pretty='format:%h'`"
+- RVM_VERSION=2.0.0 LANG="en_US.UTF-8" 
 os:
 - linux
 before_deploy: rake toolchain:archive
@@ -31,4 +31,4 @@ deploy:
     skip_cleanup: true
     on:
       repo: Shirk/Hotarubi
-      condition: "test $GIT_TC_RELEASE == $GIT_SHORT_REV"
+      condition: "$(git log -1 --pretty='format:%h' scripts/toolchain-meta.yaml scripts/patches) = $(git log -1 --pretty='format:%h')"
