@@ -4,7 +4,11 @@ require 'uri'
 require 'yaml'
 require 'rake/clean'
 
-ENV['PATH'] = "#{Dir.pwd}/toolchain/bin:#{ENV['PATH']}"
+# -- patch env to include the default toolchain location
+ENV['PATH']              = "#{Dir.pwd}/toolchain/bin:#{ENV['PATH']}"
+ENV['LD_LIBRARY_PATH']   = "#{Dir.pwd}/toolchain/lib:#{ENV['LD_LIBRARY_PATH']}"
+ENV['DYLD_LIBRARY_PATH'] = "#{Dir.pwd}/toolchain/lib:#{ENV['DYLD_LIBRARY_PATH']}"
+# --
 
 TC_META  = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-meta.yaml" )
 TC_FLAGS = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-flags.yaml" )
