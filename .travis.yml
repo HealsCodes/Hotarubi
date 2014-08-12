@@ -4,6 +4,8 @@ compiler:
 before_install:
 - echo $LANG
 - echo $LC_ALL
+- echo $GIT_TC_RELEASE
+- echo $GIT_SHORT_REV
 - rvm use $RVM_VERSION --install --binary --fuzzy
 - gem update --system
 - gem --version
@@ -17,9 +19,7 @@ branches:
   only:
   - master
 env:
-- RVM_VERSION=2.0.0 LANG="en_US.UTF-8"
-- GIT_TC_RELEASE="`git log -1 --pretty='format:%h' scripts/toolchain-meta.yaml scripts/patches`"
-- GIT_SHORT_REV="`git log -1 --pretty='format:%h'`"
+- RVM_VERSION=2.0.0 LANG="en_US.UTF-8" GIT_TC_RELEASE="`git log -1 --pretty='format:%h' scripts/toolchain-meta.yaml scripts/patches`" GIT_SHORT_REV="`git log -1 --pretty='format:%h'`"
 os:
 - linux
 before_deploy: rake toolchain:archive
