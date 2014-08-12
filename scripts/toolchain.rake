@@ -4,8 +4,11 @@ require 'uri'
 require 'yaml'
 require 'rake/clean'
 
+ENV['PATH'] = "#{Dir.pwd}/toolchain/bin:#{ENV['PATH']}"
+
 TC_META  = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-meta.yaml" )
 TC_FLAGS = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-flags.yaml" )
+TC_RELEASE =`git log -1 --pretty=format:%h scripts/toolchain-meta.yaml scripts/patches`
 
 TC = {
   :cxx => 'toolchain/bin/x86_64-elf-g++',
@@ -18,7 +21,25 @@ TC = {
 }
 TC.merge!( YAML::load_file( 'toolchain.yaml' ) ) if File.exists?( 'toolchain.yaml' )
 
-TC_RELEASE=`git log -1 --pretty=format:%h scripts/toolchain-meta.yaml scripts/toolchain.rake scripts/patches`
+$silent  = ""
+
+def _show_progress
+  if ENV['TRAVIS'] or ENV['QUIET']
+    dots = Thread.new { while true do print '..'; sleep 60; end }
+    dots
+  end
+  nil
+end
+
+def _stop_progress( dots )
+  dots.kill unless dots.nil?
+  puts
+end
+
+if ENV['TRAVIS'] or ENV['QUIET']
+  # TRAVIS or QUIET was set, no build output
+  $silent  = ">/dev/null 2>/dev/null"
+end
 
 namespace :toolchain do
   desc "Build the host toolchain and required dependencies (defined in toolchain-meta.yaml)."
@@ -99,7 +120,12 @@ namespace :toolchain do
 
     # setup archive extraction
     file source_path => source_arch do
+      unless $silent.empty?
+        Rake::FileUtilsExt.verbose( false )
+      end
+
       makedirs "toolchain/src"
+      rm_rf "#{source_path}", :verbose => false
       tar_flags = case File.extname( meta[ :uri ] )
         when '.gz'   then '-xzf'
         when '.tgz'  then '-xzf'
@@ -113,8 +139,12 @@ namespace :toolchain do
       patches = meta[ :patches ] ||= []
       Dir.chdir( source_path ) do
         patches.each do |patch|
-          sh "patch -p1 < ../../../scripts/patches/#{patch}"
+          sh "patch -p1 < ../../../scripts/patches/#{patch} #{$silent}"
         end
+      end
+
+      unless $silent.empty?
+        Rake::FileUtilsExt.verbose( true )
       end
     end
 
@@ -122,6 +152,13 @@ namespace :toolchain do
     deps = [ source_path ] + ( meta[ :deps ] ||= [] )
 
     file "toolchain/.build-#{target}" => deps do
+      progress = nil
+      unless $silent.empty?
+        print "building #{target}"
+        progress = _show_progress
+        Rake::FileUtilsExt.verbose( false )
+      end
+
       unless File.exists? "toolchain/.build-#{target}"
         ( conf_flags = [ "--prefix=@PREFIX@" ] + ( meta[ :config_flags ] ||= [] ) ).map! do |flag|
           flag.gsub( /@PREFIX@/, "#{Dir.pwd}/toolchain/" )
@@ -129,18 +166,36 @@ namespace :toolchain do
 
         makedirs build_path
         Dir.chdir( build_path ) do
-          sh "../../src/#{File.basename( source_path )}/configure #{conf_flags.join( ' ' )}"
-          unless meta.has_key? :targets
-            sh "make && make install"
-          else
-            # build only specific targets
-            meta[ :targets ].each do |target|
-              sh "make #{target}"
+          begin
+            sh "../../src/#{File.basename( source_path )}/configure #{conf_flags.join( ' ' )} #{$silent}"
+
+            unless meta.has_key? :targets
+              sh "make #{$silent} && make install #{$silent}"
+            else
+              # build only specific targets
+              meta[ :targets ].each do |target|
+                sh "make #{target} #{$silent}"
+              end
             end
+          rescue
+            # dump conifg.log files if possible
+            unless $silent.empty?
+              puts "building failed - trying to dump config.log.."
+              Dir.glob( '**/config.log' ).each do |logpath|
+                puts "--- #{logpath}:\n#{File.read( logpath )}\n\n"
+              end
+            end
+
+            raise
           end
         end
       end
       touch "toolchain/.build-#{target}"
+
+      unless $silent.empty?
+        _stop_progress( progress )
+        Rake::FileUtilsExt.verbose( true )
+      end
     end
 
     #desc "Build #{target}"

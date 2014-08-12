@@ -29,4 +29,4 @@ deploy:
     skip_cleanup: true
     on:
       repo: Shirk/Hotarubi
-      condition: "$(git log -1 --pretty='format:%h' scripts/toolchain* scripts/patches) = $(git log -1 --pretty='format:%h')"
+      condition: "$(git log -1 --pretty='format:%h' scripts/toolchain-meta.yaml scripts/patches) = $(git log -1 --pretty='format:%h')"
