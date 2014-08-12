@@ -22,13 +22,14 @@ env:
 - RVM_VERSION=2.0.0 LANG="en_US.UTF-8" 
 os:
 - linux
-before_deploy: rake toolchain:archive
-deploy:
-  - provider: releases
-    api_key:
-      secure: CJkNron+GJzqTp0Wa+5xHW+Gy5XIRCtx2LHlluF+4HTM5Pyu/IymTAHSu3+v+6InWfgt2sb35NcLYM05PPx/6XAkxu5S6WaWbl7dmkp9VD7h1OG8xCjF9/SRRGNF6j9PSsccqZ6MbbDi+k9Ye5VAcJLE1TlRGgFYF4C+6EEdGLE=
-    file: toolchain-*.tar.bz2
-    skip_cleanup: true
-    on:
-      repo: Shirk/Hotarubi
-      condition: "$(git log -1 --pretty='format:%h' scripts/toolchain-meta.yaml scripts/patches) = $(git log -1 --pretty='format:%h')"
+## disable toolchain-staging for now
+#before_deploy: rake toolchain:archive
+#deploy:
+#  - provider: releases
+#    api_key:
+#      secure: CJkNron+GJzqTp0Wa+5xHW+Gy5XIRCtx2LHlluF+4HTM5Pyu/IymTAHSu3+v+6InWfgt2sb35NcLYM05PPx/6XAkxu5S6WaWbl7dmkp9VD7h1OG8xCjF9/SRRGNF6j9PSsccqZ6MbbDi+k9Ye5VAcJLE1TlRGgFYF4C+6EEdGLE=
+#    file: toolchain-*.tar.bz2
+#    skip_cleanup: true
+#    on:
+#      repo: Shirk/Hotarubi
+#      condition: "$(git log -1 --pretty='format:%h' scripts/toolchain-meta.yaml scripts/patches) = $(git log -1 --pretty='format:%h')"
