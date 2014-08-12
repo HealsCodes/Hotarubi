@@ -11,7 +11,7 @@ Most files contain proper licensing headers at their start however a few file ma
 These files are mostly in-development code which I consider unstable I that I'm currently   
 working on. *All of these files are covered by the GNU GPL too.*
 
-## Building ##
+## Building [![Build Status](https://travis-ci.org/Shirk/Hotarubi.svg?branch=master)](https://travis-ci.org/Shirk/Hotarubi) ##
 
 ほたるび uses [Rake][1] as the build system of choice.   
 In addition to that a working C/C++ compiler is required to build the needed tools.
