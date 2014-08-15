@@ -46,8 +46,8 @@ intermediate files.
 
 ### Testing ###
 
-Some parts of ほたるび can be tested offline without having to build and run the complete kernel.  
-To provide a robust test suite the source tree contains a fused copy of the [Goole Test Framework (gtest)][5].   
+Some parts of ほたるび can be tested offline without having to build and run the complete kernel.
+To provide a robust test suite the source tree contains a fused copy of the [Google Test Framework (gtest)][5].   
 
 *gtest is released under the New BSD License - see scripts/test/gtest/LICENSE for details.*   
 
