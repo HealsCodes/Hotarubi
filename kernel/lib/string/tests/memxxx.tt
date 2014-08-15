@@ -1,0 +1,86 @@
+/*******************************************************************************
+
+	Copyright (C) 2014  René 'Shirk' Köcher
+ 
+	This file is part of Hotarubi.
+
+	Hotarubi is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+ 
+	Hotarubi is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+ 
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*******************************************************************************/
+
+/* unit testing for string and memory functions from string.h */
+
+#include "gtest/gtest.h"
+#include "../memxxx.cc"
+
+unsigned char *test_data_1 = ( unsigned char* )"abcde";
+unsigned char *test_data_2 = ( unsigned char* )"abcdx";
+unsigned char *test_data_3 = ( unsigned char* )"xxxxx";
+
+TEST( memchr, match )
+{
+	EXPECT_EQ( builtin_memchr( test_data_1,  'c', 5 ), &test_data_1[2] );
+	EXPECT_EQ( builtin_memchr( test_data_1,  'a', 1 ), &test_data_1[0] );
+	EXPECT_EQ( builtin_memchr( test_data_1, '\0', 6 ), &test_data_1[5] );
+}
+
+TEST( memchr, no_match )
+{
+	EXPECT_EQ( builtin_memchr( test_data_1,  'a', 0 ), (void*)0 );
+	EXPECT_EQ( builtin_memchr( test_data_1, '\0', 5 ), (void*)0 );
+}
+
+TEST( memcmp, equal )
+{
+	EXPECT_EQ( builtin_memcmp( test_data_1, test_data_1, 5 ), 0 );
+	EXPECT_EQ( builtin_memcmp( test_data_1, test_data_2, 4 ), 0 );
+	EXPECT_EQ( builtin_memcmp( test_data_1, test_data_3, 0 ), 0 );
+}
+
+TEST( memcmp, different )
+{
+	EXPECT_LT( builtin_memcmp( test_data_1, test_data_2, 5 ), 0 );
+	EXPECT_GT( builtin_memcmp( test_data_3, test_data_1, 1 ), 0 );
+}
+
+TEST( memcpy, )
+{
+	char buffer[] = "xxxxxxxxxxx";
+
+	EXPECT_TRUE( builtin_memcpy( buffer, test_data_1, 6 ) == buffer );
+	EXPECT_EQ( buffer[4],  'e' );
+	EXPECT_EQ( buffer[5], '\0' );
+
+	EXPECT_TRUE( builtin_memcpy( &buffer[5], test_data_1, 5 ) == &buffer[5] );
+	EXPECT_EQ( buffer[9],  'e' );
+	EXPECT_EQ( buffer[10], 'x' );
+}
+
+TEST( memmove, no_overlap )
+{
+	char buffer[] = "xxxxabcde";
+
+	EXPECT_TRUE( builtin_memmove( buffer, &buffer[4], 5 ) == buffer );
+	EXPECT_EQ( buffer[0], 'a' );
+	EXPECT_EQ( buffer[4], 'e' );
+	EXPECT_EQ( buffer[5], 'b' );
+}
+
+TEST( memmove, overlap )
+{
+	char buffer[] = "abcdebcde";
+
+	EXPECT_TRUE( builtin_memmove( &buffer[4], buffer, 5 ) == &buffer[4] );
+	EXPECT_EQ( buffer[4], 'a' );
+}

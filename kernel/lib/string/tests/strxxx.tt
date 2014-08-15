@@ -1,0 +1,154 @@
+/*******************************************************************************
+
+	Copyright (C) 2014  René 'Shirk' Köcher
+ 
+	This file is part of Hotarubi.
+
+	Hotarubi is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+ 
+	Hotarubi is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+ 
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*******************************************************************************/
+
+
+/* unit testing for string and memory functions from string.h */
+
+#include "gtest/gtest.h"
+#include "../strxxx.cc"
+
+const char* test_data_1 = "abcde\0";
+const char* test_data_2 = "abcdx\0";
+const char* test_data_3 = "abccd\0";
+
+TEST( strcat, )
+{
+	char buffer[] = "xx\0xxxxxx";
+
+	EXPECT_TRUE( builtin_strcat( buffer, test_data_1 ) == buffer );
+	EXPECT_EQ(   'a', buffer[2] );
+	EXPECT_EQ(   'e', buffer[6] );
+	EXPECT_EQ(  '\0', buffer[7] );
+	EXPECT_EQ(   'x', buffer[8] );
+
+	buffer[0] = '\0';
+
+	EXPECT_TRUE( builtin_strcat( buffer, test_data_2 ) == buffer );
+	EXPECT_EQ(  'x', buffer[4] );
+	EXPECT_EQ( '\0', buffer[5] );
+
+	EXPECT_TRUE( builtin_strcat( buffer, "\0" ) == buffer );
+	EXPECT_EQ(  '\0', buffer[5] );
+	EXPECT_EQ(   'e', buffer[6] );
+}
+
+TEST( strchr, )
+{
+	EXPECT_EQ( ( void* )0, builtin_strchr( test_data_3, 'x'  ) );
+	EXPECT_EQ( &test_data_3[0], builtin_strchr( test_data_3, 'a'  ) );
+	EXPECT_EQ( &test_data_3[4], builtin_strchr( test_data_3, 'd'  ) );
+	EXPECT_EQ( &test_data_3[5], builtin_strchr( test_data_3, '\0' ) );
+	EXPECT_EQ( &test_data_3[2], builtin_strchr( test_data_3, 'c'  ) );
+}
+
+TEST( strcmp, equal )
+{
+	char buffer[] = "abcde";
+
+	EXPECT_EQ( 0, builtin_strcmp( test_data_1, buffer ) );
+}
+
+TEST( strcmp, different )
+{
+	char empty[] = "";
+	char buffer[] = "abcd\xfc";
+
+	EXPECT_GT( 0, builtin_strcmp( test_data_1, test_data_2 ) );
+	EXPECT_GT( 0, builtin_strcmp( empty      , test_data_1 ) );
+	EXPECT_GT( 0, builtin_strcmp( test_data_1, buffer ) );
+
+	EXPECT_LT( 0, builtin_strcmp( test_data_2, test_data_1 ) );
+	EXPECT_LT( 0, builtin_strcmp( test_data_1, empty ) );
+}
+
+TEST( strcpy, )
+{
+	char buffer[] = "xxxxx";
+
+	EXPECT_TRUE( builtin_strcpy( buffer, "" ) == buffer );
+	EXPECT_EQ( '\0', buffer[0] );
+	EXPECT_EQ(  'x', buffer[1] );
+
+	EXPECT_TRUE( builtin_strcpy( buffer, test_data_1 ) == buffer );
+	EXPECT_EQ(  'a', buffer[0] );
+	EXPECT_EQ(  'e', buffer[4] );
+	EXPECT_EQ( '\0', buffer[5] );
+}
+
+TEST( strcspn, )
+{
+	EXPECT_EQ( 5, builtin_strcspn( test_data_1,   "x" ) );
+	EXPECT_EQ( 5, builtin_strcspn( test_data_1, "xyz" ) );
+	EXPECT_EQ( 5, builtin_strcspn( test_data_1, "zyx" ) );
+	EXPECT_EQ( 4, builtin_strcspn( test_data_2,   "x" ) );
+	EXPECT_EQ( 4, builtin_strcspn( test_data_2, "xyz" ) );
+	EXPECT_EQ( 4, builtin_strcspn( test_data_2, "zyx" ) );
+	EXPECT_EQ( 0, builtin_strcspn( test_data_1,   "a" ) );
+	EXPECT_EQ( 0, builtin_strcspn( test_data_1, "abc" ) );
+	EXPECT_EQ( 0, builtin_strcspn( test_data_1, "cba" ) );
+}
+
+TEST( strlen, )
+{
+	EXPECT_EQ( 5, builtin_strlen( test_data_1 ) );
+	EXPECT_EQ( 0, builtin_strlen( "" ) );
+}
+
+TEST( strpbrk, )
+{
+	EXPECT_EQ( ( void* ) 0, builtin_strpbrk( test_data_1,   "x" ) );
+	EXPECT_EQ( ( void* ) 0, builtin_strpbrk( test_data_1, "xyz" ) );
+	EXPECT_EQ( &test_data_2[4], builtin_strpbrk( test_data_2,   "x" ) );
+	EXPECT_EQ( &test_data_2[4], builtin_strpbrk( test_data_2, "xyz" ) );
+	EXPECT_EQ( &test_data_2[4], builtin_strpbrk( test_data_2, "zyx" ) );
+	EXPECT_EQ( &test_data_1[0], builtin_strpbrk( test_data_1,   "a" ) );
+	EXPECT_EQ( &test_data_1[0], builtin_strpbrk( test_data_1, "abc" ) );
+	EXPECT_EQ( &test_data_1[0], builtin_strpbrk( test_data_1, "cba" ) );
+}
+
+TEST( strrchr, )
+{
+	EXPECT_EQ( &test_data_1[5], builtin_strrchr( test_data_1, '\0' ) );
+	EXPECT_EQ( &test_data_1[4], builtin_strrchr( test_data_1,  'e' ) );
+	EXPECT_EQ( &test_data_1[0], builtin_strrchr( test_data_1,  'a' ) );
+	EXPECT_EQ( &test_data_3[3], builtin_strrchr( test_data_3,  'c' ) );
+}
+
+TEST( strspn, )
+{
+	EXPECT_EQ( 3, builtin_strspn( test_data_1, "abc" ) );
+	EXPECT_EQ( 0, builtin_strspn( test_data_1, "b"   ) );
+	EXPECT_EQ( 5, builtin_strspn( test_data_1, test_data_1 ) );
+}
+
+TEST( strstr, )
+{
+	char buffer[] = "abcabcabcdabcde";
+
+	EXPECT_EQ( ( void* )0, builtin_strstr( buffer,   "x" ) );
+	EXPECT_EQ( ( void* )0, builtin_strstr( buffer, "xyz" ) );
+
+	EXPECT_EQ( &buffer[0] , builtin_strstr( buffer,     "a" ) );
+	EXPECT_EQ( &buffer[0] , builtin_strstr( buffer,   "abc" ) );
+	EXPECT_EQ( &buffer[6] , builtin_strstr( buffer,  "abcd" ) );
+	EXPECT_EQ( &buffer[10], builtin_strstr( buffer, "abcde" ) );
+}
+
