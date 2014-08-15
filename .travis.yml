@@ -4,17 +4,13 @@ compiler:
 before_install:
 - echo $LANG
 - echo $LC_ALL
-- echo $GIT_TC_RELEASE
-- echo $GIT_SHORT_REV
 - rvm use $RVM_VERSION --install --binary --fuzzy
 - gem update --system
 - gem --version
 - gem install rake
 - rake --version
-before_script:
-- rake toolchain:build
-script:
-- rake
+before_script: rake travis:prepare
+script: rake travis:run_build
 branches:
   only:
   - master
