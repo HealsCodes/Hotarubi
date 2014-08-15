@@ -90,35 +90,50 @@ namespace :toolchain do
 
     file source_arch do
       makedirs "toolchain/arc"
-      begin
-        length = 0
-        URI.parse( meta[ :uri ] ).open( {
-          :content_length_proc => lambda { |size| length = size },
-          :progress_proc       => lambda { |size| print ".. fetching #{source_arch} [#{size / 1024}/#{length / 1024}kb]...    \r" },
-          :read_timeout        => 60,
-          :redirect            => true } ) do |io|
+      tries = 3
+      while tries > 0 do
+        error = nil
+        begin
+          length = 0
+          URI.parse( meta[ :uri ] ).open( {
+            :content_length_proc => lambda { |size| length = size },
+            :progress_proc       => lambda { |size| print ".. fetching #{source_arch} [#{size / 1024}/#{length / 1024}kb]...    \r" },
+            :read_timeout        => 60,
+            :redirect            => true } ) do |io|
 
-          File.open( source_arch, 'wb' ) { |f| f.write( io.read ); puts }
+            File.open( source_arch, 'wb' ) { |f| f.write( io.read ); puts }
+          end
+
+          unless length == meta[ :size ]
+            error = "Size mismatch for #{source_arch} (expected #{meta[ :size ]} got #{length})!"
+          end
+
+          if meta.has_key? :md5
+            hash = OpenSSL::Digest::MD5.new
+            hash.update( File.read( source_arch ) )
+            error = "MD5 mismatch for #{source_arch}!" if hash.hexdigest != meta[ :md5 ]
+          end
+
+          if meta.has_key? :sha
+            hash = OpenSSL::Digest::SHA256.new
+            hash.update( File.read( source_arch ) )
+            error = "SHA256 mismatch for #{source_arch}!" if hash.hexdigest != meta[ :sha ]
+          end
+
+        rescue SystemCallError => err
+            error = "Error while loading #{meta[ :uri ]}: #{err.to_s}"
         end
-
-        unless length == meta[ :size ]
-          fail "Size mismatch for #{source_arch} (expected #{meta[ :size ]} got #{length})!"
+        tries -= 1
+        
+        break if error.nil?
+        unless error.nil?
+          if tries == 0
+            fail error
+          else
+            puts error
+          end
+          rm_f source_arch
         end
-
-        if meta.has_key? :md5
-          hash = OpenSSL::Digest::MD5.new
-          hash.update( File.read( source_arch ) )
-          fail "MD5 mismatch for #{source_arch}!" if hash.hexdigest != meta[ :md5 ]
-        end
-
-        if meta.has_key? :sha
-          hash = OpenSSL::Digest::SHA256.new
-          hash.update( File.read( source_arch ) )
-          fail "SHA256 mismatch for #{source_arch}!" if hash.hexdigest != meta[ :sha ]
-        end
-
-      rescue SystemCallError => err
-          fail "Error while loading #{meta[ :uri ]}: #{err.to_s}"
       end
     end
 
