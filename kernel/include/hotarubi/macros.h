@@ -24,15 +24,13 @@
 #ifndef MACROS_H
 #define MACROS_H 1
 
-#define BEGIN_C_DECL \
-	#ifdef __cplusplus \
-	extern "C" { \
-	#endif
-
-#define END_C_DECL \
-	#ifdef __cplusplus \
-	} \
-	#endif
+#ifdef __cplusplus
+# define BEGIN_C_DECL extern "C" {
+# define END_C_DECL   }
+#else
+# define BEGIN_C_DECL
+# define END_C_DECL
+#endif
 
 #ifndef RUN_TESTS
 # define _BUILTIN(x) x
