@@ -16,6 +16,8 @@ namespace :test do
       puts "DO-TEST  #{File.basename( binary )}"
       sh %{#{binary} --gtest_color=yes}, :verbose => false
     end
+
+    puts "\nOffline test passed :)\n\n"
   end
 
   desc "Remove test binaries"
