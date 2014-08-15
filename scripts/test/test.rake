@@ -14,7 +14,7 @@ namespace :test do
   task :offline do
     TEST_BINARIES.each do |binary|
       puts "DO-TEST  #{File.basename( binary )}"
-      sh %{#{binary} --gtest_color=yes}, :verbose => false
+      sh %{#{binary} --gtest_color=yes --gtest_print_time=0}, :verbose => false
     end
 
     puts "\nOffline test passed :)\n\n"
@@ -29,13 +29,13 @@ namespace :test do
     binary = "#{File.dirname( source )}/test-#{File.basename( source ).ext( '' )}"
     file binary => source do |target|
       puts "CC-TEST  #{target}"
-      sh %{gcc -I #{TEST_INCLUDE_BASE}           \
+      sh %{g++ -I #{TEST_INCLUDE_BASE}           \
                -DRUN_TESTS=1                     \
                -o #{target.name}                 \
                -x c++                            \
                #{target.prerequisites.join(' ')} \
                #{TEST_INCLUDE_BASE}/gtest/*.cc   \
-               -lc++}, :verbose => false
+               -lpthread}, :verbose => false
     end
 
     task :offline => binary
