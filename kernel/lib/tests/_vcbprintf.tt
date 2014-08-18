@@ -24,6 +24,7 @@
 #include "gtest/gtest.h"
 #include "../_vcbprintf.cc"
 
+size_t call_count = 0;
 char print_buffer[1024];
 struct print_data
 {
@@ -34,6 +35,7 @@ size_t print_cb( void *p, const char *str, size_t n )
 {
 	struct print_data *pd = ( struct print_data * )p;
 	strncat( pd->buffer, str, n );
+	++call_count;
 	return n;
 }
 
@@ -654,4 +656,7 @@ TEST( vcbprintf, _vcbprintf )
 	PRINTF_TEST(20, "00edcb5433          ", "%+ -0*.*x", 20, 10, -0x1234abcdu);
 	PRINTF_TEST(20, "1234ABCD            ", "% -+0*.*X", 20, 5, 0x1234abcdu);
 	PRINTF_TEST(20, "00EDCB5433          ", "% -+0*.*X", 20, 10, -0x1234abcdu);
+
+	fprintf( stdout, "[ -------- ] _vcbprintf cb stats: %zu calls\n", call_count );
+	fflush( stdout );
 }

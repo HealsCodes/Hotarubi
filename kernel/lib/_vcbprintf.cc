@@ -62,6 +62,48 @@ convert_number( char *s, size_t n, uintmax_t num, unsigned base, bool caps )
 	s[len] = '\0';
 }
 
+
+/* pad_string is a small performance enhancement.
+ * by allowing to padd strings of up to 40 characters with a single call to cb
+ * the overall overhead of cb calls is reduced drastically.
+ *
+ * PDClib test suite without pad_string: 2568 calls to cb
+ * PDClib test suite with pad_string   : 636 calls to cb
+ */
+static const char fill_space[] = "                                        ";
+static const char fill_zero [] = "0000000000000000000000000000000000000000";
+
+static inline int pad_string( bool use_zero, size_t len,
+	                          void *p, size_t ( *cb )( void *, const char *, size_t ) )
+{
+	int rc = 0;
+	const char *filler = ( use_zero ) ? fill_zero : fill_space;
+	const size_t fill_size = strlen( filler );
+
+	while( len )
+	{
+		if( len && len < fill_size )
+		{
+			if( cb( p, filler, len ) != len )
+			{
+				return -1;
+			}
+			rc += len;
+			return rc;
+		}
+		else
+		{
+			if( cb( p, filler, fill_size ) != fill_size )
+			{
+				return -1;
+			}
+			len -= fill_size;
+			rc += fill_size;
+		}
+	}
+	return rc;
+}
+
 extern "C" int
 _vcbprintf( void *p, size_t ( *cb )( void *, const char *, size_t ),
             const char *fmt, va_list ap )
@@ -342,8 +384,6 @@ _vcbprintf( void *p, size_t ( *cb )( void *, const char *, size_t ),
 				 *     width: minimal length of number + prefix + sign
 				 */
 				int numlen = strlen( numbuf );
-				//precision = ( precision < numlen ) ? numlen : precision;
-
 				int precision_with_prefix = ( precision < numlen ) ? numlen : precision;
 
 				sign = 0;
@@ -387,9 +427,13 @@ _vcbprintf( void *p, size_t ( *cb )( void *, const char *, size_t ),
 							PUTS( prefix, strlen( prefix ) );
 						}
 					}
-					while( padd++ < width )
+					if( padd < width )
 					{
-						PUTC( ( flags.fill_with_zero ) ? "0" : " " );
+						if( pad_string( flags.fill_with_zero, width - padd, p, cb ) != width - padd )
+						{
+							return -1;
+						}
+						produced += width - padd;
 					}
 				}
 				if( !flags.fill_with_zero )
@@ -407,9 +451,13 @@ _vcbprintf( void *p, size_t ( *cb )( void *, const char *, size_t ),
 				{
 					/* print at least $precision digits - fill with zeros if needed */
 					padd = numlen;
-					while( padd++ < precision )
+					if( padd < precision )
 					{
-						PUTC( "0" );
+						if( pad_string( true, precision - padd, p, cb ) != precision - padd )
+						{
+							return -1;
+						}
+						produced += precision - padd;
 					}
 					
 					if( have_dot && precision == 0 && number == 0 )
@@ -419,9 +467,13 @@ _vcbprintf( void *p, size_t ( *cb )( void *, const char *, size_t ),
 					}
 					PUTS( numbuf, ( size_t )numlen )
 				}
-				while( width-- > precision_with_prefix && flags.left_justify )
+				if( width > precision_with_prefix && flags.left_justify )
 				{
-					PUTC( " " );
+					if( pad_string( false, width - precision_with_prefix, p, cb ) != width - precision_with_prefix )
+					{
+						return -1;
+					}
+					produced += width - precision_with_prefix;
 				}
 			}
 				fmt++;
@@ -431,20 +483,22 @@ _vcbprintf( void *p, size_t ( *cb )( void *, const char *, size_t ),
 			case 'c':
 			{
 				char c = va_arg( ap, int );
-				if( !flags.left_justify )
+				if( !flags.left_justify && width > 1)
 				{
-					while( width-- > 1 )
+					if( pad_string( false, width - 1, p, cb ) != width - 1)
 					{
-						PUTC( " " );
+						return -1;
 					}
+					produced += width - 1;
 				}
 				PUTC( &c );
-				if( flags.left_justify )
+				if( flags.left_justify && width > 1)
 				{
-					while( width-- > 1 )
+					if( pad_string( false, width - 1, p, cb ) != width - 1 )
 					{
-						PUTC( " " );
+						return -1;
 					}
+					produced += width - 1;
 				}
 			}
 				break;
@@ -466,17 +520,26 @@ _vcbprintf( void *p, size_t ( *cb )( void *, const char *, size_t ),
 				}
 				padd = precision;
 
-				while( flags.left_justify == 0 && padd < width--)
+				if( flags.left_justify == 0 && padd < width )
 				{
-					PUTC( " " );
+					if( pad_string( false, width - padd, p, cb ) != width - padd )
+					{
+						return -1;
+					}
+					produced += width - padd;
 				}
+
 				if( precision )
 				{
 					PUTS( string, ( size_t )precision );
 				}
-				while( flags.left_justify && padd < width-- )
+				if( flags.left_justify && padd < width )
 				{
-					PUTC( " " );
+					if( pad_string( false, width - padd, p, cb ) != width - padd )
+					{
+						return -1;
+					}
+					produced += width - padd;
 				}
 			}
 				break;
