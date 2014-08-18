@@ -291,6 +291,7 @@ _vcbprintf( void *p, size_t ( *cb )( void *, const char *, size_t ),
 		{
 			case 'p': /* FALL THROUGH */
 				flags.alternate_form = 1;
+				length = kLengthPtrDiffT;
 			case 'd': /* FALL THROUGH */
 			case 'i': /* FALL THROUGH */
 			case 'o': /* FALL THROUGH */
