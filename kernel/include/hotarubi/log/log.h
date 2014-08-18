@@ -20,9 +20,17 @@
 *******************************************************************************/
 
 /*  */
+#ifndef _LOG_H
+#define _LOG_H 1
 
 #include <stdint.h>
 #include <stddef.h>
+
+#define __UNDER_CONSTRUCTION__ do { \
+    	log::printk( "\n\n-- reached under construction area in %s:%d, idling --\n ", \
+    	             __FILE__, __LINE__ ); \
+    	for( ; ; ); \
+    } while( 0 )
 
 namespace log
 {
@@ -32,3 +40,5 @@ namespace log
 	void register_debug_output( void );
 	void unregister_debug_output( void );
 };
+
+#endif
