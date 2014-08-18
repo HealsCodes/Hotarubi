@@ -32,6 +32,8 @@
 #define BOOT_STACK_BASE 0x7000
 #define BOOT_STACK_END  0x8000
 
+#define BOOT_MAX_MAPPED 0x00c00000
+
 #ifdef __ASSEMBLER__
 # define ULL
 #endif
