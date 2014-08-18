@@ -19,28 +19,14 @@
 
 *******************************************************************************/
 
-/* high-level language kernel-entry and main initialization */
+#ifndef __MEMORY_H
+#define __MEMORY_H 1
 
-#include <stdint.h>
 #include <hotarubi/boot/multiboot.h>
-#include <hotarubi/log/log.h>
-#include <hotarubi/memory.h>
 
-extern "C" void _init( void );
-
-extern "C" void
-kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
+namespace memory
 {
-	_init();
+	void init_physical_memory( const multiboot_info_t *boot_info );
+};
 
-	log::init_printk();
-	log::register_debug_output();
-
-	log::printk( "-- reached %s --\n", __FUNCTION__ );
-	log::printk( "loader magic: %#08x\n", loader_magic );
-	log::printk( "loader data : %p\n", multiboot_info );
-
-	memory::init_physical_memory( multiboot_info );
-
-	__UNDER_CONSTRUCTION__;
-}
+#endif
