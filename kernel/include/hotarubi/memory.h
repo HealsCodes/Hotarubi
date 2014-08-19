@@ -26,7 +26,10 @@
 
 namespace memory
 {
-	void init_physical_memory( const multiboot_info_t *boot_info );
+namespace physmm
+{
+	void init( const multiboot_info_t *boot_info );
+};
 };
 
 #endif

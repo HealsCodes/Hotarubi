@@ -40,7 +40,7 @@ kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
 	log::printk( "loader magic: %#08x\n", loader_magic );
 	log::printk( "loader data : %p\n", multiboot_info );
 
-	memory::init_physical_memory( multiboot_info );
+	memory::physmm::init( multiboot_info );
 
 	__UNDER_CONSTRUCTION__;
 }
