@@ -27,7 +27,7 @@
 #include <hotarubi/boot/bootmem.h>
 #include <hotarubi/boot/multiboot.h>
 
-#ifndef RUN_TESTS
+#ifdef KERNEL
 extern "C" unsigned char __end[]; /* defined in link.ld */
 #endif
 
@@ -111,7 +111,7 @@ _search_first_free( void )
 	return 0;
 }
 
-#ifndef RUN_TESTS
+#ifdef KERNEL
 
 void
 init( const multiboot_info_t *boot_info )

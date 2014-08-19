@@ -32,7 +32,7 @@
 # define END_C_DECL
 #endif
 
-#ifndef RUN_TESTS
+#ifdef KERNEL
 # define _BUILTIN(x) x
 #else
 # define _BUILTIN(x) builtin_ ##x
