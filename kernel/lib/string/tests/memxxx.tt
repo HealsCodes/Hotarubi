@@ -84,3 +84,11 @@ TEST( memmove, overlap )
 	EXPECT_TRUE( builtin_memmove( &buffer[4], buffer, 5 ) == &buffer[4] );
 	EXPECT_EQ( buffer[4], 'a' );
 }
+
+TEST( memset, )
+{
+	char buffer[] = "aaaaaaaaaa";
+
+	EXPECT_TRUE( builtin_memset( buffer, 'x', strlen( buffer ) ) == buffer );
+	EXPECT_STREQ( "xxxxxxxxxx", buffer );
+}

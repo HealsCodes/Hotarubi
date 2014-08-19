@@ -114,9 +114,9 @@ _BUILTIN( memmove( void *s1, void *s2, size_t n ) )
 extern "C" void*
 _BUILTIN( memset( void *s, int c, size_t n ) )
 {
-	unsigned char* p = ( unsigned char* )s;
+	unsigned char *p = ( unsigned char* )s;
 
-	for( ; n > 0; --n, *p++ = ( unsigned char )c );
+	for( ; n > 0; --n, p[n] = ( unsigned char )c );
 
 	return s;
 }
