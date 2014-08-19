@@ -6,9 +6,11 @@ before_install:
 - echo $LC_ALL
 - rvm use $RVM_VERSION --install --binary --fuzzy
 - gem update --system
-- gem --version
 - gem install rake
-- rake --version
+- sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+- sudo apt-get -qq update
+- sudo apt-get -qq install g++-4.8
+- sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90
 before_script: rake travis:prepare
 script: rake travis:run_build
 branches:
