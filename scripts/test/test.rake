@@ -33,6 +33,7 @@ namespace :test do
                -DRUN_TESTS=1                     \
                -o #{target.name}                 \
                -x c++                            \
+               -std=gnu++11                      \
                #{target.prerequisites.join(' ')} \
                #{TEST_INCLUDE_BASE}/gtest/*.cc   \
                -lpthread}, :verbose => false
