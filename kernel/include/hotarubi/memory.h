@@ -29,6 +29,12 @@ namespace memory
 namespace physmm
 {
 	void init( const multiboot_info_t *boot_info );
+
+	void set_physical_base_offset( const uint64_t offset );
+	uint32_t free_page_count( void );
+
+	void *alloc_page( void );
+	void free_page( const void *page );
 };
 };
 

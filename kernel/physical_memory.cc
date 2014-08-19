@@ -27,7 +27,9 @@
 #include <hotarubi/boot/bootmem.h>
 #include <hotarubi/boot/multiboot.h>
 
+#ifndef RUN_TESTS
 extern "C" unsigned char __end[]; /* defined in link.ld */
+#endif
 
 namespace memory
 {
@@ -38,6 +40,7 @@ static uint32_t *memory_map_data = nullptr;
 static uint32_t  memory_map_size = 0;
 static uint32_t  memory_map_used = 0;
 static uint64_t  memory_map_base = 0; /* offset applied to physical addresses */
+static uint8_t   memory_map_lock = 0;
 
 static inline bool
 _peek_used( uint64_t bit )
@@ -88,6 +91,27 @@ _mark_used_range( uint64_t addr, size_t len )
 		_mark_used( bit++ );
 	}
 }
+
+static inline uint64_t
+_search_first_free( void )
+{
+	for( size_t i = 0; i < memory_map_size / sizeof( memory_map_data[0] ); ++i )
+	{
+		if( memory_map_data[i] != 0xffffffff )
+		{
+			for( uint64_t bit = 0; bit < 32; ++bit )
+			{
+				if( _peek_used( i * 32 + bit ) == false )
+				{
+					return ( i * 32 + bit ) * 0x1000;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+#ifndef RUN_TESTS
 
 void
 init( const multiboot_info_t *boot_info )
@@ -194,6 +218,71 @@ init( const multiboot_info_t *boot_info )
 	             memory_map_size * 8,
 	             memory_map_size * 8 - memory_map_used,
 	             ( (uint64_t) 0x1000 * ( memory_map_size * 8 - memory_map_used ) / 0x100000 ) );
+}
+
+#endif
+
+void
+set_physical_base_offset( const uint64_t offset )
+{
+	memory_map_base = offset;
+}
+
+uint32_t
+free_page_count( void )
+{
+	return memory_map_size * 8 - memory_map_used;
+}
+
+void*
+alloc_page( void )
+{
+	uint64_t addr;
+
+	do {} while( __sync_lock_test_and_set( &memory_map_lock, 1 ) );
+	if( free_page_count() == 0 )
+	{
+		__sync_lock_release( &memory_map_lock );
+		return nullptr;
+	}
+
+	addr = _search_first_free();
+	if( addr == 0 )
+	{
+		__sync_lock_release( &memory_map_lock );
+		return nullptr;
+	}
+
+	_mark_used_range( addr, 0x1000 );
+	__sync_lock_release( &memory_map_lock );
+
+	return ( void* )( addr + memory_map_base );
+}
+
+void
+free_page( const void* page )
+{
+	uint64_t addr = ( uint64_t )page;
+
+	if( addr >= memory_map_base )
+	{
+		addr -= memory_map_base;
+	}
+
+	if( addr < 0x1000 )
+	{
+		/* prevent freeing of the first 4K */
+		return;
+	}
+	if( addr / 0x1000 / 32 + addr / 0x1000 % 32 > memory_map_size * 8 )
+	{
+		/* prevent out-of-bounds access */
+		return;
+	}
+
+	do {} while( __sync_lock_test_and_set( &memory_map_lock, 1 ) );
+	_mark_free_range( addr, 0x1000 );
+	__sync_lock_release( &memory_map_lock );
 }
 
 };

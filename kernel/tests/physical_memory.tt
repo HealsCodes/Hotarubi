@@ -1,0 +1,247 @@
+/*******************************************************************************
+
+    Copyright (C) 2014  René 'Shirk' Köcher
+ 
+    This file is part of Hotarubi.
+
+    Hotarubi is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+ 
+    Hotarubi is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+ 
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*******************************************************************************/
+
+/* physical memory manager - bitmaping and other tests */
+
+#include "gtest/gtest.h"
+#include "../physical_memory.cc"
+
+namespace log
+{
+	int printk( const char*, ... ){}
+};
+
+#define SET_MEMORY_MAP( map, used ) do { \
+		memory::physmm::memory_map_data = map; \
+		memory::physmm::memory_map_size = sizeof( map ); \
+		memory::physmm::memory_map_used = used; \
+	} while( 0 )
+
+TEST( memory_map, _mark_used )
+{
+	uint32_t map_1[] = { 0xffffffff, 0xffffffff };
+	uint32_t map_2[] = { 0x00000000, 0x00000000 };
+
+	SET_MEMORY_MAP( map_1, 64 );
+	memory::physmm::_mark_used(  0 );
+	memory::physmm::_mark_used( 31 );
+	memory::physmm::_mark_used( 32 );
+	memory::physmm::_mark_used( 63 );
+
+	EXPECT_EQ( 0xffffffff, map_1[0] );
+	EXPECT_EQ( 0xffffffff, map_1[1] );
+
+	SET_MEMORY_MAP( map_2, 0 );
+	memory::physmm::_mark_used(  0 );
+	EXPECT_EQ( 0x00000001, map_2[0] );
+	EXPECT_EQ( 0x00000000, map_2[1] );
+
+	memory::physmm::_mark_used( 31 );
+	EXPECT_EQ( 0x80000001, map_2[0] );
+	EXPECT_EQ( 0x00000000, map_2[1] );
+
+	memory::physmm::_mark_used( 32 );
+	EXPECT_EQ( 0x80000001, map_2[0] );
+	EXPECT_EQ( 0x00000001, map_2[1] );
+
+	memory::physmm::_mark_used( 63 );
+	EXPECT_EQ( 0x80000001, map_2[0] );
+	EXPECT_EQ( 0x80000001, map_2[1] );
+}
+
+TEST( memory_map, _mark_free )
+{
+	uint32_t map_1[] = { 0x00000000, 0x00000000 };
+	uint32_t map_2[] = { 0xffffffff, 0xffffffff };
+
+	SET_MEMORY_MAP( map_1, 0 );
+	memory::physmm::_mark_free(  0 );
+	memory::physmm::_mark_free( 31 );
+	memory::physmm::_mark_free( 32 );
+	memory::physmm::_mark_free( 63 );
+
+	EXPECT_EQ( 0x00000000, map_1[0] );
+	EXPECT_EQ( 0x00000000, map_1[1] );
+
+	SET_MEMORY_MAP( map_2, 64 );
+	memory::physmm::_mark_free(  0 );
+	EXPECT_EQ( 0xfffffffe, map_2[0] );
+	EXPECT_EQ( 0xffffffff, map_2[1] );
+
+	memory::physmm::_mark_free( 31 );
+	EXPECT_EQ( 0x7ffffffe, map_2[0] );
+	EXPECT_EQ( 0xffffffff, map_2[1] );
+
+	memory::physmm::_mark_free( 32 );
+	EXPECT_EQ( 0x7ffffffe, map_2[0] );
+	EXPECT_EQ( 0xfffffffe, map_2[1] );
+
+	memory::physmm::_mark_free( 63 );
+	EXPECT_EQ( 0x7ffffffe, map_2[0] );
+	EXPECT_EQ( 0x7ffffffe, map_2[1] );
+}
+
+TEST( memory_map, _mark_free_range )
+{
+	uint32_t map_1[] = { 0xffffffff, 0xffffffff };
+
+	SET_MEMORY_MAP( map_1, 64 );
+	memory::physmm::_mark_free_range( 0xc000, 0x8000 );
+	EXPECT_EQ( 0xfff00fff, map_1[0] );
+	EXPECT_EQ( 0xffffffff, map_1[1] );
+
+	memory::physmm::_mark_free_range( 0x2c000, 0x8000 );
+	EXPECT_EQ( 0xfff00fff, map_1[0] );
+	EXPECT_EQ( 0xfff00fff, map_1[1] );
+
+	memory::physmm::_mark_free_range( 0x1000, 0x3ffff );
+	EXPECT_EQ( 0x00000001, map_1[0] );
+	EXPECT_EQ( 0x00000000, map_1[1] );
+}
+
+TEST( memory_map, _mark_used_range )
+{
+	uint32_t map_1[] = { 0x00000000, 0x00000000 };
+
+	SET_MEMORY_MAP( map_1, 64 );
+	memory::physmm::_mark_used_range( 0xc000, 0x8000 );
+	EXPECT_EQ( 0x00ff000, map_1[0] );
+	EXPECT_EQ( 0x0000000, map_1[1] );
+
+	memory::physmm::_mark_used_range( 0x2c000, 0x8000 );
+	EXPECT_EQ( 0x000ff000, map_1[0] );
+	EXPECT_EQ( 0x000ff000, map_1[1] );
+
+	memory::physmm::_mark_used_range( 0x1000, 0x3ffff );
+	EXPECT_EQ( 0xfffffffe, map_1[0] );
+	EXPECT_EQ( 0xffffffff, map_1[1] );
+}
+
+TEST( memory_map, _search_first_free )
+{
+	uint32_t map_1[] = { 0xffffffff, 0xfffffffe };
+	uint32_t map_2[] = { 0xfffffffd, 0xffffffff };
+	uint32_t map_3[] = { 0         , 0 };
+	uint32_t map_4[] = { 0xffffffff, 0xffffffff };
+
+	SET_MEMORY_MAP( map_1, 63 );
+	EXPECT_EQ( 0x20000, memory::physmm::_search_first_free() );
+
+	SET_MEMORY_MAP( map_2, 63 );
+	EXPECT_EQ( 0x01000, memory::physmm::_search_first_free() );
+
+	SET_MEMORY_MAP( map_3, 0 );
+	EXPECT_EQ( 0x00000, memory::physmm::_search_first_free() );
+
+	SET_MEMORY_MAP( map_4, 64 );
+	EXPECT_EQ( 0x00000, memory::physmm::_search_first_free() );
+}
+
+TEST( physmm, alloc_page )
+{
+	uint32_t map[] = { 0xfffffff1, 0xffffffff };
+
+	SET_MEMORY_MAP( map, 61 );
+	EXPECT_EQ( 3, memory::physmm::free_page_count() );
+
+	EXPECT_EQ( 0x1000    , ( ptrdiff_t )memory::physmm::alloc_page() );
+	EXPECT_EQ( 0xfffffff3, map[0] );
+	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
+
+	EXPECT_EQ( 0x2000    , ( ptrdiff_t )memory::physmm::alloc_page() );
+	EXPECT_EQ( 0xfffffff7, map[0] );
+	EXPECT_EQ( 1         , memory::physmm::free_page_count() );
+
+	EXPECT_EQ( 0x3000    , ( ptrdiff_t )memory::physmm::alloc_page() );
+	EXPECT_EQ( 0xffffffff, map[0] );
+	EXPECT_EQ( 0         , memory::physmm::free_page_count() );
+
+	EXPECT_EQ( nullptr, memory::physmm::alloc_page() );
+}
+
+TEST( physmm, alloc_page_with_offset )
+{
+	uint32_t map[] = { 0xfffffff1, 0xffffffff };
+
+	SET_MEMORY_MAP( map, 61 );
+
+	memory::physmm::set_physical_base_offset( 0xffffffff80000000 );
+	EXPECT_EQ( 0xffffffff80001000, ( ptrdiff_t )memory::physmm::alloc_page() );
+	EXPECT_EQ( 0xffffffff80002000, ( ptrdiff_t )memory::physmm::alloc_page() );
+	EXPECT_EQ( 0xffffffff80003000, ( ptrdiff_t )memory::physmm::alloc_page() );
+
+	EXPECT_EQ( nullptr, memory::physmm::alloc_page() );
+}
+
+TEST( physmm, free_page )
+{
+	uint32_t map[] = { 0xffffffff, 0xffffffff };
+
+	SET_MEMORY_MAP( map, 64 );
+
+	memory::physmm::free_page( ( void* )0x1000 );
+	EXPECT_EQ( 0xfffffffd, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 1         , memory::physmm::free_page_count() );
+
+	memory::physmm::free_page( ( void* )0x2000 );
+	EXPECT_EQ( 0xfffffff9, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
+
+	memory::physmm::free_page( ( void* )0x0 );
+	EXPECT_EQ( 0xfffffff9, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
+
+	memory::physmm::free_page( ( void* )0x40000 ); // out of memory-map
+	EXPECT_EQ( 0xfffffff9, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
+}
+
+TEST( physmm, free_page_with_offset )
+{
+	uint32_t map[] = { 0xffffffff, 0xffffffff };
+
+	SET_MEMORY_MAP( map, 64 );
+	memory::physmm::set_physical_base_offset( 0xffffffff80000000 );
+
+	memory::physmm::free_page( ( void* )0xffffffff80001000 );
+	EXPECT_EQ( 0xfffffffd, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 1         , memory::physmm::free_page_count() );
+
+	memory::physmm::free_page( ( void* )0xffffffff80002000 );
+	EXPECT_EQ( 0xfffffff9, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
+
+	memory::physmm::free_page( ( void* )0xffffffff80000000 );
+	EXPECT_EQ( 0xfffffff9, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
+
+	memory::physmm::free_page( ( void* )0xffffffff80040000 ); // out of memory-map
+	EXPECT_EQ( 0xfffffff9, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
+}
