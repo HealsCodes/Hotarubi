@@ -12,11 +12,6 @@ namespace :test do
 
   desc "Run offline tests against GTest"
   task :offline do
-    TEST_BINARIES.each do |binary|
-      puts "DO-TEST  #{File.basename( binary )}"
-      sh %{#{binary} --gtest_color=yes --gtest_print_time=0}, :verbose => false
-    end
-
     puts "\nOffline test passed :)\n\n"
   end
 
@@ -39,7 +34,14 @@ namespace :test do
                -lpthread}, :verbose => false
     end
 
-    task :offline => binary
+    test_id = File.basename( source ).ext( '' ).to_sym
+    task test_id => binary do |t|
+      binary = t.prerequisites.first
+      puts "DO-TEST  #{File.basename( binary )}"
+      sh %{#{binary} --gtest_color=yes --gtest_print_time=0}, :verbose => false
+    end
+
+    task :offline => test_id
   end
 end
 
