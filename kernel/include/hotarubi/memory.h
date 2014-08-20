@@ -31,6 +31,7 @@ namespace physmm
 	void init( const multiboot_info_t *boot_info );
 
 	void set_physical_base_offset( const uint64_t offset );
+	size_t free_memory_for_bootstrap( void );
 	uint32_t free_page_count( void );
 
 	void *alloc_page( void );

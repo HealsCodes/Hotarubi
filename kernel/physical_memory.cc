@@ -23,9 +23,9 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <hotarubi/memory.h>
 #include <hotarubi/log/log.h>
 #include <hotarubi/boot/bootmem.h>
-#include <hotarubi/boot/multiboot.h>
 
 #ifdef KERNEL
 extern "C" unsigned char __end[]; /* defined in link.ld */
@@ -45,13 +45,17 @@ static uint8_t   memory_map_lock = 0;
 static inline bool
 _peek_used( uint64_t bit )
 {
+	if( bit > memory_map_size * 8 )
+	{
+		return true;
+	}
 	return memory_map_data[ bit / 32 ] & ( 1 << ( bit % 32 ) );
 }
 
 static inline void
 _mark_used( uint64_t bit )
 {
-	if( _peek_used( bit ) == false )
+	if( ( bit < memory_map_size * 8 ) && _peek_used( bit ) == false )
 	{
 		memory_map_data[ bit / 32 ] |= ( 1 << ( bit % 32 ) );
 		++memory_map_used;
@@ -61,7 +65,7 @@ _mark_used( uint64_t bit )
 static inline void
 _mark_free( uint64_t bit )
 {
-	if( _peek_used( bit ) == true )
+	if( ( bit < memory_map_size * 8 ) && _peek_used( bit ) == true )
 	{
 		memory_map_data[ bit / 32 ] &= ~( 1 << ( bit % 32 ) );
 		--memory_map_used;
@@ -218,6 +222,7 @@ init( const multiboot_info_t *boot_info )
 	             memory_map_size * 8,
 	             memory_map_size * 8 - memory_map_used,
 	             ( (uint64_t) 0x1000 * ( memory_map_size * 8 - memory_map_used ) / 0x100000 ) );
+	log::printk( "Free memory for bootstrap VM: %luKB\n", free_memory_for_bootstrap() / 1024 );
 }
 
 #endif
@@ -226,6 +231,20 @@ void
 set_physical_base_offset( const uint64_t offset )
 {
 	memory_map_base = offset;
+}
+
+size_t
+free_memory_for_bootstrap( void )
+{
+	size_t res = 0;
+	for( uint64_t bit = BOOT_MAX_MAPPED / 0x1000; bit > 1; --bit )
+	{
+		if( _peek_used( bit ) == false )
+		{
+			res += 0x1000;
+		}
+	}
+	return res;
 }
 
 uint32_t
