@@ -131,7 +131,7 @@ _map_region( uint64_t *pml4, uint64_t vaddr, uint64_t paddr, size_t len,
 static
 void _create_system_vm( void )
 {
-	log::printk( "Initializing kernel virtual address space\n" );
+	log::printk( "Initializing kernel virtual address space..\n" );
 
 	if( ( system_pml4 = ( uint64_t* )physmm::alloc_page() ) == nullptr )
 	{
@@ -174,12 +174,6 @@ void _create_system_vm( void )
 	{
 		goto error_out;
 	}
-
-	/* be bold and activate the new PML4 for testing */
-	io::write_cr3( ( uint64_t )system_pml4 );
-
-	/* relocate the memory bitmap */
-	physmm::set_physical_base_offset( 0xffff880000000000 );
 	return;
 
 error_out:
@@ -191,6 +185,13 @@ void
 init( void )
 {
 	_create_system_vm();
+
+	/* be bold and activate the new PML4 */
+	log::printk( "Switching to kernel virtual address space..\n");
+	io::write_cr3( ( uint64_t )system_pml4 );
+
+	/* relocate the memory bitmap */
+	physmm::set_physical_base_offset( 0xffff880000000000 );
 }
 
 };
