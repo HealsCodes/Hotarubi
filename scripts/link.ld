@@ -23,11 +23,11 @@ SECTIONS {
 		KEEP (kernel/boot.o (.text))
 		KEEP (kernel/boot.o (.data))
 		KEEP (kernel/boot.o (.bss))
-
-		__ebootstrap = .;
 	}
 	
 	. = ALIGN(4096);
+	__ebootstrap = .;
+	
 	. += KERNEL_VMA;
 
 	.text : AT(ADDR(.text) - KERNEL_VMA) {
