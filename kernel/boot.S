@@ -101,14 +101,14 @@ L_setup_paging:
 	mov dword ptr[edi + 0x1fe * 8], (BOOT_PDT | 0x01)
 
 	mov ebx, BOOT_PDT
-	mov dword ptr[ebx + 0 * 8], (0x00000000 | 0x83)
-	mov dword ptr[ebx + 1 * 8], (0x00200000 | 0x83)
-	mov dword ptr[ebx + 2 * 8], (0x00400000 | 0x83)
-	mov dword ptr[ebx + 3 * 8], (0x00600000 | 0x83)
-	mov dword ptr[ebx + 4 * 8], (0x00800000 | 0x83)
-	mov dword ptr[ebx + 5 * 8], (0x00a00000 | 0x83)
-	mov dword ptr[ebx + 6 * 8], (0x00c00000 | 0x83)
-	mov dword ptr[ebx + 7 * 8], (0x00e00000 | 0x83)
+	mov ecx, 0
+	mov eax, 0x83
+L_map_boot_vm:
+	mov dword ptr[ebx + ecx * 8], eax
+	inc ecx
+	add eax, 0x00200000
+	cmp eax, BOOT_MAX_MAPPED
+	jna L_map_boot_vm
 
 L_enable_paging:
 	mov eax, BOOT_PML4
