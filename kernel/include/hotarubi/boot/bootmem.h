@@ -29,9 +29,6 @@
 #define BOOT_PDPT_2     0x4000
 #define BOOT_PDT        0x5000
 
-#define BOOT_STACK_BASE 0x7000
-#define BOOT_STACK_END  0x8000
-
 #define BOOT_MAX_MAPPED 0x01000000
 
 #ifdef __ASSEMBLER__
