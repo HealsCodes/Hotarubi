@@ -21,7 +21,8 @@ TC = {
   :ld  => 'toolchain/bin/x86_64-elf-ld',
   :oc  => 'toolchain/bin/x86_64-elf-objcopy',
   :od  => 'toolchain/bin/x86_64-elf-objdump',
-  :nm  => 'toolchain/bin/x86_64-elf-nm'
+  :nm  => 'toolchain/bin/x86_64-elf-nm',
+  :xorriso => 'toolchain/bin/xorriso',
 }
 TC.merge!( YAML::load_file( 'toolchain.yaml' ) ) if File.exists?( 'toolchain.yaml' )
 
@@ -84,9 +85,10 @@ namespace :toolchain do
   # auto generate tasks
   TC_META[ :archives ].each do |target, meta|
     # setup source downloads
-    source_arch = "toolchain/arc/#{File.basename( meta[ :uri ] )}"
-    source_path = "toolchain/src/#{File.basename( meta[ :uri ], meta[ :uri ].gsub( /^.*(\.tar.\.*)/, '\1' ))}"
-    build_path  = "toolchain/bld/#{File.basename( source_path )}"
+    source_arch   = "toolchain/arc/#{meta[ :name ]}" if meta.has_key? :name 
+    source_arch ||= "toolchain/arc/#{File.basename( meta[ :uri ] )}"
+    source_path   = "toolchain/src/#{File.basename( source_arch, source_arch.gsub( /^.*(\.tar.\.*)/, '\1' ))}"
+    build_path    = "toolchain/bld/#{File.basename( source_path )}"
 
     file source_arch do
       makedirs "toolchain/arc"
@@ -160,6 +162,7 @@ namespace :toolchain do
         patches.each do |patch|
           sh "patch -p1 < ../../../scripts/patches/#{patch} #{$silent}"
         end
+        File.chmod( 0755, 'configure' )
       end
 
       unless $silent.empty?
