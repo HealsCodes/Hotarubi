@@ -149,15 +149,6 @@ void _create_system_vm( void )
 		goto error_out;
 	}
 
-	/* map the .bootstrap section */
-	if( !_map_region( system_pml4, 
-	                  ( uint64_t )__bootstrap, ( uint64_t )__bootstrap,
-	                  ( uint64_t )__ebootstrap - ( uint64_t )__bootstrap,
-	                  kPageFlagWritable ) )
-	{
-		goto error_out;
-	}
-
 	/* map kernel .text (ro) */
 	if( !_map_region( system_pml4, 
 	                  ( uint64_t )__text, ( uint64_t )__text - KERNEL_VMA,
