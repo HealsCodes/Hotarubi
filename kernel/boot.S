@@ -107,6 +107,8 @@ L_setup_paging:
 	mov dword ptr[ebx + 3 * 8], (0x00600000 | 0x83)
 	mov dword ptr[ebx + 4 * 8], (0x00800000 | 0x83)
 	mov dword ptr[ebx + 5 * 8], (0x00a00000 | 0x83)
+	mov dword ptr[ebx + 6 * 8], (0x00c00000 | 0x83)
+	mov dword ptr[ebx + 7 * 8], (0x00e00000 | 0x83)
 
 L_enable_paging:
 	mov eax, BOOT_PML4
