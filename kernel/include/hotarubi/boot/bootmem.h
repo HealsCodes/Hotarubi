@@ -29,7 +29,7 @@
 #define BOOT_PDPT_2     0x4000
 #define BOOT_PDT        0x5000
 
-#define BOOT_MAX_MAPPED 0x01000000
+#define BOOT_MAX_MAPPED 0x3ff00000
 
 #ifdef __ASSEMBLER__
 # define ULL
