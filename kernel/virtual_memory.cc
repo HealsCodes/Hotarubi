@@ -128,63 +128,6 @@ _map_region( uint64_t *pml4, uint64_t vaddr, uint64_t paddr, size_t len,
 	return true;
 }
 
-static void
-_expand_bootstrap_vm()
-{
-	/* expand the bootstrap VM to cover all physical memory using 2MB pages */
-	size_t required_bootmem = ( physmm::memory_upper_bound / 0x40000000 + 1) * 0x1000;
-
-	if( physmm::free_memory_for_bootstrap() < required_bootmem )
-	{
-		log::printk( "\nPANIC: not enough memory to expand bootstrap VM (have: %luKB, need: %luKB)\n",
-		             physmm::free_memory_for_bootstrap() / 1024,
-		             required_bootmem / 1024 );
-		do {} while( 1 );
-	}
-
-	uint64_t *pml4 = ( uint64_t* )BOOT_PML4,
-	         *pdpt = nullptr,
-	         *pdt  = nullptr;
-
-	for( uint64_t vaddr = BOOT_MAX_MAPPED;
-	     vaddr < ( physmm::memory_upper_bound & ~0xfff );
-	     vaddr += 0x200000 )
-	{
-		/* the bootstrap VM is already in-place, so we fetch each PML4 / PDP
-		 * entry, check if it has a mapped lower table and allocate one if not
-		 */
-		pdpt = ( uint64_t * )MMU_PDPT_ADDR( pml4, vaddr );
-		if( pdpt == nullptr )
-		{
-			if( ( pdpt = ( uint64_t *)physmm::alloc_page() ) == nullptr )
-			{
-				goto error_out;
-			}
-			memset( pdpt, 0, 0x1000 );
-
-			pml4[MMU_PML4_INDEX( vaddr )] = ( ( uint64_t )pdpt ) | kPageFlagPresent;
-		}
-
-		pdt = ( uint64_t * )MMU_PDT_ADDR( pdpt, vaddr );
-		if( pdt == nullptr )
-		{
-			if( ( pdt = ( uint64_t *)physmm::alloc_page() ) == nullptr )
-			{
-				goto error_out;
-			}
-			memset( pdt, 0, 0x1000 );
-
-			pdpt[MMU_PDPT_INDEX( vaddr )] = ( ( uint64_t )pdt ) | kPageFlagPresent;
-		}
-		pdt[MMU_PDT_INDEX( vaddr )] = vaddr | kPageFlagPresent | kPageFlagWritable | kPageFlagSizeExtend;
-	}
-	return;
-
-error_out:
-	log::printk( "\nPANIC: out of memory while expanding bootstrap VM!\n" );
-	do {} while( 1 );
-}
-
 static
 void _create_system_vm( void )
 {
@@ -256,7 +199,6 @@ error_out:
 void
 init( void )
 {
-	_expand_bootstrap_vm();
 	_create_system_vm();
 }
 
