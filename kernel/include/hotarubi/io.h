@@ -75,54 +75,54 @@ namespace io
 	inline uint64_t read_cr1( void )
 	{
 		uint64_t r;
-		__asm__ __volatile__( "movl %%cr1, %0" : "=r"( r ) );
+		__asm__ __volatile__( "movq %%cr1, %0" : "=r"( r ) );
 		return r;
 	};
 
 	inline uint64_t read_cr2( void )
 	{
 		uint64_t r;
-		__asm__ __volatile__( "movl %%cr2, %0" : "=r"( r ) );
+		__asm__ __volatile__( "movq %%cr2, %0" : "=r"( r ) );
 		return r;
 	};
 
 	inline uint64_t read_cr3( void )
 	{
 		uint64_t r;
-		__asm__ __volatile__( "movl %%cr3, %0" : "=r"( r ) );
+		__asm__ __volatile__( "movq %%cr3, %0" : "=r"( r ) );
 		return r;
 	};
 
 	inline uint64_t read_cr4( void )
 	{
 		uint64_t r;
-		__asm__ __volatile__( "movl %%cr4, %0" : "=r"( r ) );
+		__asm__ __volatile__( "movq %%cr4, %0" : "=r"( r ) );
 		return r;
 	};
 
 	inline void write_cr0( uint64_t val )
 	{
-		__asm__ __volatile__( "movl %0, %%cr0" :: "r"( val ) );
+		__asm__ __volatile__( "movq %0, %%cr0" :: "r"( val ) );
 	};
 
 	inline void write_cr1( uint64_t val )
 	{
-		__asm__ __volatile__( "movl %0, %%cr1" :: "r"( val ) );
+		__asm__ __volatile__( "movq %0, %%cr1" :: "r"( val ) );
 	};
 
 	inline void write_cr2( uint64_t val )
 	{
-		__asm__ __volatile__( "movl %0, %%cr2" :: "r"( val ) );
+		__asm__ __volatile__( "movq %0, %%cr2" :: "r"( val ) );
 	};
 
 	inline void write_cr3( uint64_t val )
 	{
-		__asm__ __volatile__( "movl %0, %%cr3" :: "r"( val ) );
+		__asm__ __volatile__( "movq %0, %%cr3" :: "r"( val ) );
 	};
 
 	inline void write_cr4( uint64_t val )
 	{
-		__asm__ __volatile__( "movl %0, %%cr4" :: "r"( val ) );
+		__asm__ __volatile__( "movq %0, %%cr4" :: "r"( val ) );
 	};
 
 	inline uint64_t read_msr( uint32_t reg )
