@@ -41,6 +41,7 @@ static uint32_t  memory_map_size = 0;
 static uint32_t  memory_map_used = 0;
 static uint64_t  memory_map_base = 0; /* offset applied to physical addresses */
 static uint8_t   memory_map_lock = 0;
+uint64_t memory_upper_bound = 0;
 
 static inline bool
 _peek_used( uint64_t bit )
@@ -156,6 +157,17 @@ init( const multiboot_info_t *boot_info )
 	} while( ( ptrdiff_t)mem_map < boot_info->mmap_addr + boot_info->mmap_length );
 
 	memory_map_size = last_chunk_end / 0x1000 / 8;
+	memory_upper_bound = last_chunk_end;
+
+	if( last_chunk_end < 0x1000000 )
+	{
+		/* FIXME: this *will fail* due to BIOS / chipset mappings
+		 *        if there are exactly 16MB installed..
+		 */
+		log::printk( "\nPANIC: not enough physical RAM installed at least 16MB are required!\n" );
+		do {} while( 1 );
+	}
+
 	log::printk( "-----------------------------------------\n" );
 	log::printk( "%lu MB usable RAM\n", mem_available / 0x100000 );
 	log::printk( "%u KB required for physical bitmap\n", memory_map_size / 1024 );
@@ -184,10 +196,10 @@ init( const multiboot_info_t *boot_info )
 	if( first_free + memory_map_size > first_chunk_above_1mb )
 	{
 		// FIXME: I need a panic() method!
-		log::printk( "PANIC: not enough free RAM to initialize memory bitmap!\n" );
-		do {} while( 0 );
+		log::printk( "\nPANIC: not enough free RAM to initialize memory bitmap!\n" );
+		do {} while( 1 );
 	}
-	first_free += sizeof( uint64_t ) + KERNEL_VMA;
+	first_free += sizeof( uint64_t );
 
 	memory_map_data = ( uint32_t* )first_free;
 	memory_map_used = memory_map_size * 8;
@@ -222,7 +234,6 @@ init( const multiboot_info_t *boot_info )
 	             memory_map_size * 8,
 	             memory_map_size * 8 - memory_map_used,
 	             ( (uint64_t) 0x1000 * ( memory_map_size * 8 - memory_map_used ) / 0x100000 ) );
-	log::printk( "Free memory for bootstrap VM: %luKB\n", free_memory_for_bootstrap() / 1024 );
 }
 
 #endif
@@ -230,7 +241,19 @@ init( const multiboot_info_t *boot_info )
 void
 set_physical_base_offset( const uint64_t offset )
 {
+	/* change the expected location of the memory map and set the offset for
+	 * physical addresses used alloc_page() and free_page()
+	 */
+	memory_map_data = ( uint32_t* )( ( ptrdiff_t )memory_map_data - memory_map_base + offset );
 	memory_map_base = offset;
+
+	log::printk( "Physical memory map relocated to %p\n", memory_map_data );
+}
+
+uint64_t 
+physical_base_offset( void )
+{
+	return memory_map_base;
 }
 
 size_t
@@ -264,7 +287,6 @@ alloc_page( void )
 		__sync_lock_release( &memory_map_lock );
 		return nullptr;
 	}
-
 	addr = _search_first_free();
 	if( addr == 0 )
 	{
