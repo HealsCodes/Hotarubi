@@ -41,7 +41,7 @@ multiboot:
 /******************************************************************************/
 .section .text
 /******************************************************************************/
-.extern kernel_entry, __bss, __ebss
+.extern kernel_entry, __bss, __ebss, BOOT_PML4, BOOT_PDPT_1, BOOT_PDPT_2, BOOT_PDT
 
 .code32
 .globl kickstart
@@ -83,24 +83,30 @@ L_flush_gdt_32:
 	jne L_enable_paging
 
 L_setup_paging:
-	mov edi, BOOT_PML4
-	mov ecx, BOOT_PDPT_2
+	lea edi, BOOT_PML4
+	lea ecx, BOOT_PDPT_2
 	add ecx, 0x1000
 	sub ecx, edi
 	shr ecx, 2
 	xor eax, eax
 	rep stosd
 
-	mov ebx, BOOT_PML4
-	mov dword ptr[ebx + 0]        , (BOOT_PDPT_1 | 0x01)
-	mov dword ptr[ebx + 0x1ff * 8], (BOOT_PDPT_2 | 0x01)
+	lea ebx, BOOT_PML4
+	lea eax, BOOT_PDPT_1
+	or  eax, 0x01
+	mov dword ptr[ebx + 0]        , eax
+	lea eax, BOOT_PDPT_2
+	or  eax, 0x01
+	mov dword ptr[ebx + 0x1ff * 8], eax
 
-	mov ebx, BOOT_PDPT_1
-	mov edi, BOOT_PDPT_2
-	mov dword ptr[ebx + 0]        , (BOOT_PDT | 0x01)
-	mov dword ptr[edi + 0x1fe * 8], (BOOT_PDT | 0x01)
+	lea ebx, BOOT_PDPT_1
+	lea edi, BOOT_PDPT_2
+	lea eax, BOOT_PDT
+	or  eax, 0x01
+	mov dword ptr[ebx + 0]        , eax
+	mov dword ptr[edi + 0x1fe * 8], eax
 
-	mov ebx, BOOT_PDT
+	lea ebx, BOOT_PDT
 	mov ecx, 0
 	mov eax, 0x83
 L_map_boot_vm:
@@ -111,7 +117,7 @@ L_map_boot_vm:
 	jna L_map_boot_vm
 
 L_enable_paging:
-	mov eax, BOOT_PML4
+	lea eax, BOOT_PML4
 	mov cr3, eax
 
 	mov eax, cr4

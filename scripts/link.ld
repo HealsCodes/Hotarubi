@@ -64,7 +64,21 @@ SECTIONS {
 
 		*(.bss* .gnu.linkonce.b*)
 		*(.COMMON*)
+
 		__ebss = .;
+		__bootpages = .;
+		
+		. = ALIGN(4096);
+		__BOOT_PML4 = .;
+		. = . + 4096;
+		__BOOT_PDPT_1 = .;
+		. = . + 4096;
+		__BOOT_PDPT_2 = .;
+		. = . + 4096;
+		__BOOT_PDT = .;
+		. = . + 4096;
+
+		__ebootpages = .;
 	}
 	__end = .;
 
@@ -75,4 +89,10 @@ SECTIONS {
 		*(.jcr*)
 		*(.gnu_debuglink)
 	}
+
+	/* provide relocated symbols to kernel / bootstrap */
+	BOOT_PML4   = __BOOT_PML4   - KERNEL_VMA;
+	BOOT_PDPT_1 = __BOOT_PDPT_1 - KERNEL_VMA;
+	BOOT_PDPT_2 = __BOOT_PDPT_2 - KERNEL_VMA;
+	BOOT_PDT    = __BOOT_PDT    - KERNEL_VMA;
 }

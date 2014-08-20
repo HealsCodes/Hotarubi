@@ -24,10 +24,12 @@
 #ifndef __BOOTMEM_H
 #define __BOOTMEM_H 1
 
-#define BOOT_PML4       0x2000
-#define BOOT_PDPT_1     0x3000
-#define BOOT_PDPT_2     0x4000
-#define BOOT_PDT        0x5000
+#ifndef __ASSEMBLER__
+extern "C" unsigned char BOOT_PML4[];
+extern "C" unsigned char BOOT_PDPT_1[];
+extern "C" unsigned char BOOT_PDPT_2[];
+extern "C" unsigned char BOOT_PDT[];
+#endif
 
 #define BOOT_MAX_MAPPED 0x3ff00000
 
