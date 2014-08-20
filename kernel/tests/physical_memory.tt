@@ -177,20 +177,6 @@ TEST( physmm, alloc_page )
 	EXPECT_EQ( nullptr, memory::physmm::alloc_page() );
 }
 
-TEST( physmm, alloc_page_with_offset )
-{
-	uint32_t map[] = { 0xfffffff1, 0xffffffff };
-
-	SET_MEMORY_MAP( map, 61 );
-
-	memory::physmm::set_physical_base_offset( 0xffffffff80000000 );
-	EXPECT_EQ( 0xffffffff80001000, ( ptrdiff_t )memory::physmm::alloc_page() );
-	EXPECT_EQ( 0xffffffff80002000, ( ptrdiff_t )memory::physmm::alloc_page() );
-	EXPECT_EQ( 0xffffffff80003000, ( ptrdiff_t )memory::physmm::alloc_page() );
-
-	EXPECT_EQ( nullptr, memory::physmm::alloc_page() );
-}
-
 TEST( physmm, free_page )
 {
 	uint32_t map[] = { 0xffffffff, 0xffffffff };
@@ -213,34 +199,6 @@ TEST( physmm, free_page )
 	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
 
 	memory::physmm::free_page( ( void* )0x40000 ); // out of memory-map
-	EXPECT_EQ( 0xfffffff9, map[0] );
-	EXPECT_EQ( 0xffffffff, map[1] );
-	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
-}
-
-TEST( physmm, free_page_with_offset )
-{
-	uint32_t map[] = { 0xffffffff, 0xffffffff };
-
-	SET_MEMORY_MAP( map, 64 );
-	memory::physmm::set_physical_base_offset( 0xffffffff80000000 );
-
-	memory::physmm::free_page( ( void* )0xffffffff80001000 );
-	EXPECT_EQ( 0xfffffffd, map[0] );
-	EXPECT_EQ( 0xffffffff, map[1] );
-	EXPECT_EQ( 1         , memory::physmm::free_page_count() );
-
-	memory::physmm::free_page( ( void* )0xffffffff80002000 );
-	EXPECT_EQ( 0xfffffff9, map[0] );
-	EXPECT_EQ( 0xffffffff, map[1] );
-	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
-
-	memory::physmm::free_page( ( void* )0xffffffff80000000 );
-	EXPECT_EQ( 0xfffffff9, map[0] );
-	EXPECT_EQ( 0xffffffff, map[1] );
-	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
-
-	memory::physmm::free_page( ( void* )0xffffffff80040000 ); // out of memory-map
 	EXPECT_EQ( 0xfffffff9, map[0] );
 	EXPECT_EQ( 0xffffffff, map[1] );
 	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
