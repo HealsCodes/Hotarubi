@@ -24,6 +24,7 @@ namespace :package do
                                        -no-emul-boot              \
                                        -boot-load-size 4          \
                                        -boot-info-table           \
+                                       -rock                      \
                                        "#{cd_root}"}, :verbose => false
     end
   end
