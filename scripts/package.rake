@@ -7,11 +7,11 @@ namespace :package do
     Dir.mktmpdir( 'Hotarubi_iso_' ) do |cd_root|
       iso_sources = FileList.new
 
-      iso_sources.include( "#{File.dirname( __FILE__ )}/iso/**/*" )
+      iso_sources.include( "#{File.dirname( __FILE__ )}/iso/*" )
       iso_sources.include( 'hotarubi.elf' )
       
       if Dir.exists? 'iso'
-        iso_sources.include( 'iso/**' )
+        iso_sources.include( 'iso/*' )
       end
 
       puts "PREPISO"
