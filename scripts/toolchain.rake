@@ -76,10 +76,10 @@ namespace :toolchain do
   case RUBY_PLATFORM
     when /darwin/
       so_suffix = '.dylib'
+      deps_host  = :deps_darwin
     when /linux/
       so_suffix = '.so'
-    when /[Ww]indows/
-      so_suffix = '.dll'
+      deps_host  = :deps_linux
     else
       fail "Unsupported host platform '#{RUBY_PLATFORM}'!"
   end
@@ -99,9 +99,16 @@ namespace :toolchain do
         error = nil
         begin
           length = 0
+          progress_proc = lambda { |size| print ".. fetching #{source_arch} [#{size / 1024}/#{length / 1024}kb]...    \r" }
+          
+          unless $silent.empty?
+            # no progress on Travis-CI builds
+            progress_proc = lambda { |size| true }
+          end
+
           URI.parse( meta[ :uri ] ).open( {
             :content_length_proc => lambda { |size| length = size },
-            :progress_proc       => lambda { |size| print ".. fetching #{source_arch} [#{size / 1024}/#{length / 1024}kb]...    \r" unless size.nil? },
+            :progress_proc       => progress_proc,
             :read_timeout        => 60,
             :redirect            => true } ) do |io|
 
@@ -160,10 +167,17 @@ namespace :toolchain do
       sh "tar #{tar_flags} #{source_arch} -C toolchain/src/"
       # apply patches as needed
       patches = meta[ :patches ] ||= []
+      prepare = meta[ :prepare ] ||= []
+
       Dir.chdir( source_path ) do
         patches.each do |patch|
           sh "patch -p1 < ../../../scripts/patches/#{patch} #{$silent}"
         end
+
+        prepare.each do |cmd|
+          sh "#{cmd} #{$silent}"
+        end
+
         File.chmod( 0755, 'configure' )
       end
 
@@ -173,7 +187,7 @@ namespace :toolchain do
     end
 
     # setup the build target
-    deps = [ source_path ] + ( meta[ :deps ] ||= [] )
+    deps = [ source_path ] + ( meta[ :deps ] ||= [] ) + ( meta[ deps_host ] ||= [] )
 
     file "toolchain/.build-#{target}" => deps do
       progress = nil
@@ -194,7 +208,7 @@ namespace :toolchain do
             sh "../../src/#{File.basename( source_path )}/configure #{conf_flags.join( ' ' )} #{$silent}"
 
             unless meta.has_key? :targets
-              sh "make #{$silent} && make install #{$silent}"
+              sh "make #{ '2>&1 > build.log' unless $silent.empty?} && make install #{$silent}"
             else
               # build only specific targets
               meta[ :targets ].each do |target|
@@ -204,8 +218,13 @@ namespace :toolchain do
           rescue
             # dump conifg.log files if possible
             unless $silent.empty?
-              puts "building failed - trying to dump config.log.."
+              puts "building failed - trying to dump config.log(s).."
               Dir.glob( '**/config.log' ).each do |logpath|
+                puts "--- #{logpath}:\n#{File.read( logpath )}\n\n"
+              end
+
+              puts "\n\nbuilding failed - trying to dump build.log.."
+              Dir.glob( '**/build.log' ).each do |logpath|
                 puts "--- #{logpath}:\n#{File.read( logpath )}\n\n"
               end
             end

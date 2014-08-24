@@ -9,9 +9,11 @@ before_install:
 - gem install rake
 - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 - sudo apt-get -qq update
+- sudo apt-get -qq install automake
 - sudo apt-get -qq install g++-4.8
 - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90
 - gcc --version
+- aclocal --version
 before_script: rake travis:prepare
 script: rake travis:run_build
 branches:

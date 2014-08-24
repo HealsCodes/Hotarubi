@@ -94,8 +94,8 @@ diff -Nrdup grub-2.02~beta2.orig/configure grub-2.02~beta2/configure
      :
    else
 diff -Nrdup grub-2.02~beta2.orig/configure.ac grub-2.02~beta2/configure.ac
---- grub-2.02~beta2.orig/configure.ac	2013-12-24 21:06:25.000000000 +0100
-+++ grub-2.02~beta2/configure.ac	2014-08-24 10:39:30.000000000 +0200
+--- grub-2.02~beta2.orig/configure.ac  2013-12-24 21:06:25.000000000 +0100
++++ grub-2.02~beta2/configure.ac       2014-08-24 10:39:30.000000000 +0200
 @@ -311,7 +311,7 @@ AC_PROG_LN_S
  if test "x$LEX" = "x:"; then
    AC_MSG_ERROR([flex is not found])
