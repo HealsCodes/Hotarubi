@@ -22,7 +22,9 @@ TC = {
   :oc  => 'toolchain/bin/x86_64-elf-objcopy',
   :od  => 'toolchain/bin/x86_64-elf-objdump',
   :nm  => 'toolchain/bin/x86_64-elf-nm',
+  # used in packaging
   :xorriso => 'toolchain/bin/xorriso',
+  :grubimg => 'toolchain/bin/grub-mkimage',
 }
 TC.merge!( YAML::load_file( 'toolchain.yaml' ) ) if File.exists?( 'toolchain.yaml' )
 

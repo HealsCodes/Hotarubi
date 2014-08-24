@@ -1,0 +1,38 @@
+diff -Nrdup vertis-objconv-01da921.orig/Makefile.in vertis-objconv-01da921/Makefile.in
+--- vertis-objconv-01da921.orig/Makefile.in	1970-01-01 01:00:00.000000000 +0100
++++ vertis-objconv-01da921/Makefile.in	2014-08-24 13:35:48.000000000 +0200
+@@ -0,0 +1,11 @@
++all: objconv
++
++install: objconv
++	install -d @PREFIX@/bin
++	install -m 755 objconv @PREFIX@/bin/objconv
++
++clean:
++	rm -f objconv
++
++objconv:
++	g++ -I @SRCDIR@/src/ -o $@ @SRCDIR@/src/*.cpp
+diff -Nrdup vertis-objconv-01da921.orig/configure vertis-objconv-01da921/configure
+--- vertis-objconv-01da921.orig/configure	1970-01-01 01:00:00.000000000 +0100
++++ vertis-objconv-01da921/configure	2014-08-24 13:34:59.000000000 +0200
+@@ -0,0 +1,19 @@
++#!/bin/bash
++
++PREFIX=/usr/local
++SRCDIR=$(dirname $0)
++
++while [ "$1" ];
++do
++	case $1 in
++		--prefix=*)
++			PREFIX="$(echo $1 | sed -e's/.*=//g')"
++			;;
++	esac
++	shift
++done
++
++echo "Install prefix: $PREFIX"
++echo "Source directory: $SRCDIR"
++
++sed -e "s,@PREFIX@,$PREFIX,g" -e "s,@SRCDIR@,$SRCDIR,g" < "$SRCDIR"/Makefile.in > Makefile

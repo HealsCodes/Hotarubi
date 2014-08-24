@@ -80,6 +80,42 @@
     - :gmp
     - :mpfr
 
+  :grub2:
+    :uri: http://alpha.gnu.org/gnu/grub/grub-2.02~beta2.tar.gz
+    :md5: 2e523d9bcc126813c9cac9f1d859d6ad
+    :sha: 3503984c7cee93d5c48d6dd54a5b3def48043c976edad6a7cd9c83cefa8029d3
+    :size: 9753564
+    :patches:
+    - grub-2.02~beta2_native_clang_OSX_build.patch
+    :config_flags:
+    - --disable-nls
+    - --disable-efiemu
+    - --disable-disable-grub-emu-usb
+    - --disable-disable-grub-emu-sdl
+    - --disable-disable-grub-emu-pci
+    - --disable-disable-grub-mkfont
+    - --disable-grub-themes
+    - --disable-grub-mount
+    - --disable-device-mapper
+    - --disable-liblzmap
+    - --disable-libzfs
+    - --disable-werror
+    - --with-platform=efi
+    - --target=x86_64
+    - CC=clang
+    :deps:
+    - :xorriso
+    - :objconv
+
+  :objconv:
+    :name: vertis-objconv-01da921.tar.gz
+    :uri: https://codeload.github.com/vertis/objconv/legacy.tar.gz/01da921
+    :md5: d8f59b398dc84c5c1971bd2659fc3a51
+    :sha: abadc54e489bcd4cb98d57f022629a3396a5453721e7a7f5e4619f8b6881eabd
+    :size: 520286
+    :patches:
+    - vertis-objconv-01da921-build-out-of-source.patch
+  
   :xorriso:
     :uri: http://ftpmirror.gnu.org/xorriso/xorriso-1.3.8.tar.gz
     :md5: a0fc534ef8f9589282a189f0e6cdf952
