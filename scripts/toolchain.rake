@@ -101,7 +101,7 @@ namespace :toolchain do
           length = 0
           URI.parse( meta[ :uri ] ).open( {
             :content_length_proc => lambda { |size| length = size },
-            :progress_proc       => lambda { |size| print ".. fetching #{source_arch} [#{size / 1024}/#{length / 1024}kb]...    \r" },
+            :progress_proc       => lambda { |size| print ".. fetching #{source_arch} [#{size / 1024}/#{length / 1024}kb]...    \r" unless size.nil? },
             :read_timeout        => 60,
             :redirect            => true } ) do |io|
 
