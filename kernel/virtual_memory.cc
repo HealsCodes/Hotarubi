@@ -26,8 +26,9 @@
 #include <hotarubi/io.h>
 
 #include <hotarubi/memory.h>
+#include <hotarubi/vmconst.h>
+
 #include <hotarubi/log/log.h>
-#include <hotarubi/boot/bootmem.h>
 #include <hotarubi/boot/multiboot.h>
 
 #define MMU_PML4_INDEX( x ) ( ( ( x ) >> 39 ) & 0x1ff )
@@ -72,11 +73,11 @@ _map_region( uint64_t *pml4, uint64_t vaddr, uint64_t paddr, size_t len,
 	         *pdt  = nullptr,
 	         *pt   = nullptr;
 
-	if( len % 0x1000 != 0 )
+	if( len % PAGE_SIZE != 0 )
 	{
-		len += 0x1000;
+		len += PAGE_SIZE;
 	}
-	len /= 0x1000;
+	len /= PAGE_SIZE;
 
 	/* map region expects pml4 to be accessible without any offset calculation */
 	if( pml4 == nullptr )
@@ -93,7 +94,7 @@ _map_region( uint64_t *pml4, uint64_t vaddr, uint64_t paddr, size_t len,
 			{
 				return false;
 			}
-			memset( pdpt, 0, 0x1000 );
+			memset( pdpt, 0, PAGE_SIZE );
 			pml4[MMU_PML4_INDEX( vaddr )] = PHYS_ADDR( ( uint64_t )pdpt ) | kPageFlagPresent;
 		}
 
@@ -104,7 +105,7 @@ _map_region( uint64_t *pml4, uint64_t vaddr, uint64_t paddr, size_t len,
 			{
 				return false;
 			}
-			memset( pdt, 0, 0x1000 );
+			memset( pdt, 0, PAGE_SIZE );
 			pdpt[MMU_PDPT_INDEX( vaddr )] = PHYS_ADDR( ( uint64_t )pdt ) | kPageFlagPresent;
 		}
 
@@ -115,14 +116,14 @@ _map_region( uint64_t *pml4, uint64_t vaddr, uint64_t paddr, size_t len,
 			{
 				return false;
 			}
-			memset( pt, 0, 0x1000 );
+			memset( pt, 0, PAGE_SIZE );
 			pdt[MMU_PDT_INDEX( vaddr )] = PHYS_ADDR( ( uint64_t )pt ) | kPageFlagPresent;
 		}
 
 		pt[MMU_PT_INDEX( vaddr )] = paddr | kPageFlagPresent | flags;
 
-		vaddr += 0x1000;
-		paddr += 0x1000;
+		vaddr += PAGE_SIZE;
+		paddr += PAGE_SIZE;
 	} while( --len );
 
 	return true;
@@ -137,7 +138,7 @@ void _create_system_vm( void )
 	{
 		goto error_out;
 	}
-	memset( system_pml4, 0, 0x1000 );
+	memset( system_pml4, 0, PAGE_SIZE );
 
 	/* map the video ram (bootstrap needs it) */
 	if( !_map_region( system_pml4, 0xa0000, 0xa0000, 80 * 25 * 2, kPageFlagWritable ) )
@@ -151,7 +152,7 @@ void _create_system_vm( void )
 
 	/* map kernel .text (ro) */
 	if( !_map_region( system_pml4, 
-	                  ( uint64_t )__text, ( uint64_t )__text - KERNEL_VMA,
+	                  ( uint64_t )__text, ( uint64_t )__text - kVMRangeKernelBase,
 	                  ( uint64_t )__data - ( uint64_t )__text ) )
 	{
 		goto error_out;
@@ -159,7 +160,7 @@ void _create_system_vm( void )
 
 	/* map kernel .data and .bss (rw) */
 	if( !_map_region( system_pml4, 
-	                  ( uint64_t )__data, ( uint64_t )__data -  KERNEL_VMA,
+	                  ( uint64_t )__data, ( uint64_t )__data -  kVMRangeKernelBase,
 	                  ( uint64_t )__end - ( uint64_t )__data,
 	                  kPageFlagWritable ) )
 	{
@@ -168,7 +169,7 @@ void _create_system_vm( void )
 
 	/* map the whole set of physical memory */
 	if( !_map_region( system_pml4,
-	                  0xffff880000000000, 0,
+	                  kVMRangePhysMemBase, 0,
 	                  physmm::memory_upper_bound,
 	                  kPageFlagWritable ) )
 	{
@@ -191,7 +192,7 @@ init( void )
 	io::write_cr3( ( uint64_t )system_pml4 );
 
 	/* relocate the memory bitmap */
-	physmm::set_physical_base_offset( 0xffff880000000000 );
+	physmm::set_physical_base_offset( kVMRangePhysMemBase );
 }
 
 };

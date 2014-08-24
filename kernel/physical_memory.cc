@@ -24,8 +24,9 @@
 #include <string.h>
 
 #include <hotarubi/memory.h>
+#include <hotarubi/vmconst.h>
+
 #include <hotarubi/log/log.h>
-#include <hotarubi/boot/bootmem.h>
 
 #ifdef KERNEL
 extern "C" unsigned char __end[]; /* defined in link.ld */
@@ -76,8 +77,8 @@ _mark_free( uint64_t bit )
 static inline void
 _mark_free_range( uint64_t addr, size_t len )
 {
-	uint64_t bit = addr / 0x1000;
-	len = len / 0x1000;
+	uint64_t bit = addr / PAGE_SIZE;
+	len = len / PAGE_SIZE;
 
 	for( ; len > 0; --len )
 	{
@@ -88,8 +89,8 @@ _mark_free_range( uint64_t addr, size_t len )
 static inline void
 _mark_used_range( uint64_t addr, size_t len )
 {
-	uint64_t bit = addr / 0x1000;
-	len = len / 0x1000;
+	uint64_t bit = addr / PAGE_SIZE;
+	len = len / PAGE_SIZE;
 
 	for( ; len > 0; --len )
 	{
@@ -108,7 +109,7 @@ _search_first_free( void )
 			{
 				if( _peek_used( i * 32 + bit ) == false )
 				{
-					return ( i * 32 + bit ) * 0x1000;
+					return ( i * 32 + bit ) * PAGE_SIZE;
 				}
 			}
 		}
@@ -149,14 +150,22 @@ init( const multiboot_info_t *boot_info )
 			mem_available += mem_map->len;
 		}
 
-		log::printk( "%#016llx - %#016llx, %s\n",
+		/*
+		* #define E820_RAM	1
+		* #define E820_RESERVED	2
+		* #define E820_ACPI	3
+		* #define E820_NVS	4
+		* #define E820_UNUSABLE	5
+		*/
+		log::printk( "%#016llx - %#016llx, %s (%2d)\n",
 		             mem_map->addr, mem_map->addr + mem_map->len,
-		             mem_map->type == 1 ? "free" : "rsvd" );
+		             mem_map->type == 1 ? "free" : "rsvd",
+		             mem_map->type );
 
 		mem_map = ( multiboot_memory_map_t* )( ( ptrdiff_t )mem_map + mem_map->size + sizeof( mem_map->size ) );
 	} while( ( ptrdiff_t)mem_map < boot_info->mmap_addr + boot_info->mmap_length );
 
-	memory_map_size = last_chunk_end / 0x1000 / 8;
+	memory_map_size = last_chunk_end / PAGE_SIZE / 8;
 	memory_upper_bound = last_chunk_end;
 
 	if( last_chunk_end < 0x1000000 )
@@ -206,7 +215,7 @@ init( const multiboot_info_t *boot_info )
 
 	memset( memory_map_data, 0xff, memory_map_size );
 
-	first_free += memory_map_size + 0x1000;
+	first_free += memory_map_size + PAGE_SIZE;
 	first_free &= 0x7ffff000;
 
 	/* second iteration, mark non-reserved memory above first_free as available */
@@ -233,7 +242,7 @@ init( const multiboot_info_t *boot_info )
 	             memory_map_data,
 	             memory_map_size * 8,
 	             memory_map_size * 8 - memory_map_used,
-	             ( (uint64_t) 0x1000 * ( memory_map_size * 8 - memory_map_used ) / 0x100000 ) );
+	             ( (uint64_t) PAGE_SIZE * ( memory_map_size * 8 - memory_map_used ) / 0x100000 ) );
 }
 
 #endif
@@ -260,11 +269,11 @@ size_t
 free_memory_for_bootstrap( void )
 {
 	size_t res = 0;
-	for( uint64_t bit = BOOT_MAX_MAPPED / 0x1000; bit > 1; --bit )
+	for( uint64_t bit = BOOT_MAX_MAPPED / PAGE_SIZE; bit > 1; --bit )
 	{
 		if( _peek_used( bit ) == false )
 		{
-			res += 0x1000;
+			res += PAGE_SIZE;
 		}
 	}
 	return res;
@@ -294,7 +303,7 @@ alloc_page( void )
 		return nullptr;
 	}
 
-	_mark_used_range( addr, 0x1000 );
+	_mark_used_range( addr, PAGE_SIZE );
 	__sync_lock_release( &memory_map_lock );
 
 	return ( void* )( addr + memory_map_base );
@@ -310,19 +319,19 @@ free_page( const void* page )
 		addr -= memory_map_base;
 	}
 
-	if( addr < 0x1000 )
+	if( addr < PAGE_SIZE )
 	{
 		/* prevent freeing of the first 4K */
 		return;
 	}
-	if( addr / 0x1000 / 32 + addr / 0x1000 % 32 > memory_map_size * 8 )
+	if( addr / PAGE_SIZE / 32 + addr / PAGE_SIZE % 32 > memory_map_size * 8 )
 	{
 		/* prevent out-of-bounds access */
 		return;
 	}
 
 	do {} while( __sync_lock_test_and_set( &memory_map_lock, 1 ) );
-	_mark_free_range( addr, 0x1000 );
+	_mark_free_range( addr, PAGE_SIZE );
 	__sync_lock_release( &memory_map_lock );
 }
 
