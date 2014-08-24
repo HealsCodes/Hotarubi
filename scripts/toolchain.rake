@@ -10,9 +10,9 @@ ENV['LD_LIBRARY_PATH']   = "#{Dir.pwd}/toolchain/lib:#{ENV['LD_LIBRARY_PATH']}"
 ENV['DYLD_LIBRARY_PATH'] = "#{Dir.pwd}/toolchain/lib:#{ENV['DYLD_LIBRARY_PATH']}"
 # --
 
-TC_META  = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-meta.yaml" )
-TC_FLAGS = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-flags.yaml" )
-TC_RELEASE =`git log -1 --pretty=format:%h scripts/toolchain-meta.yaml scripts/patches`
+TC_META  = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-meta.yml" )
+TC_FLAGS = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-flags.yml" )
+TC_RELEASE =`git log -1 --pretty=format:%h scripts/toolchain-meta.yml scripts/patches`
 
 TC = {
   :cxx => 'toolchain/bin/x86_64-elf-g++',
@@ -26,7 +26,7 @@ TC = {
   :xorriso => 'toolchain/bin/xorriso',
   :grubimg => 'toolchain/bin/grub-mkimage',
 }
-TC.merge!( YAML::load_file( 'toolchain.yaml' ) ) if File.exists?( 'toolchain.yaml' )
+TC.merge!( YAML::load_file( 'toolchain.yml' ) ) if File.exists?( 'toolchain.yml' )
 
 $silent  = ""
 
