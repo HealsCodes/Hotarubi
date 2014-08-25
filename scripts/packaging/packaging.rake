@@ -70,7 +70,7 @@ namespace :package do
 
       when /linux/
         # whereas linux uses mkfs.vfat, mmd and mcopy (e.g. the mtools)
-        sh "/usr/bin/mkfs.vfat -F 12 -n EFI_BOOT #{t.name}"
+        sh "/usr/sbin/mkfs.vfat -F 12 -n EFI_BOOT #{t.name}"
         sh "mmd -i #{t.name} ::/EFI"
         sh "mmd -i #{t.name} ::/EFI/BOOT"
         sh "mcopy -i #{t.name} BOOTX64.efi ::/EFI/BOOT/BOOTX64.efi"
