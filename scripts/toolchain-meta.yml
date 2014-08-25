@@ -87,7 +87,8 @@
     :size: 9753564
     :patches:
     - grub-2.02~beta2_native_clang_OSX_build.patch
-    :prepare: [ autoreconf -f -i ]
+    - grub-2.02~beta2_multiarch.patch
+    :prepare: [ autoreconf -f -i, chmod +x setup-multiarch && ./setup-multiarch ]
     :config_flags:
     - --disable-nls
     - --disable-efiemu
@@ -102,7 +103,7 @@
     - --disable-libzfs
     - --disable-werror
     - --enable-silent-rules
-    - --with-platform=efi
+    - --with-platforms=pc,efi
     - --target=x86_64
     :deps:
     - :xorriso

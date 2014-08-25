@@ -1,0 +1,87 @@
+diff -Nrdup grub-2.02~beta2.orig/Makefile-multiarch.in grub-2.02~beta2/Makefile-multiarch.in
+--- grub-2.02~beta2.orig/Makefile-multiarch.in	1970-01-01 01:00:00.000000000 +0100
++++ grub-2.02~beta2/Makefile-multiarch.in	2014-08-25 11:06:19.767835108 +0200
+@@ -0,0 +1,10 @@
++SUBDIRS=@MAKE_TARGETS@
++.PHONY: $(SUBDIRS)
++
++%: $(SUBDIRS)
++	@true
++
++$(SUBDIRS):
++	@echo "Running build for platform $@"
++	cd build_$@ && $(MAKE) $(MAKECMDGOALS)
++
+diff -Nrdup grub-2.02~beta2.orig/setup-multiarch grub-2.02~beta2/setup-multiarch
+--- grub-2.02~beta2.orig/setup-multiarch	1970-01-01 01:00:00.000000000 +0100
++++ grub-2.02~beta2/setup-multiarch	2014-08-25 11:05:14.970526736 +0200
+@@ -0,0 +1,69 @@
++#!/bin/bash
++# prevent double runs
++if ! grep -q "Autoconf" configure; then
++	echo "configure is already setup for multiarch." >&2
++	echo "To revert do 'mv configure.grub configure'" >&2
++	exit 1
++fi
++
++mv configure configure.grub
++cat > configure <<EOS
++#!/bin/bash
++
++CONFIG_ARGS=""
++CONFIG_PLATFORMS=""
++MAKE_TARGETS=""
++
++SRCDIR="\$(cd \$(dirname \$0) && pwd -P)"
++
++if [ "$PWD" == "$SRCDIR" ]; then
++	echo 'multiarch building is only supported for out-of-source builds!' >&2
++	exit 1
++fi
++
++while [ "\$1" ]; do
++	case \$1 in
++		--with-platforms=*)
++			CONFIG_PLATFORMS="\$(echo \$1 | sed -e 's/.*=//g' -e's/,/ /g')"
++		;;
++
++		--help)
++		;;
++
++		*)
++			CONFIG_ARGS="\${CONFIG_ARGS} \$1"
++		;;
++	esac
++	shift
++done
++
++for platform in \$CONFIG_PLATFORMS; do
++	case \$platform in
++		emu|qemu-mips|yeelong|ieee1275|coreboot|multiboot|efi|pc|qemu|xen)
++			echo "Adding multiarch platform: \$platform"
++			MAKE_TARGETS="\${platform} \${MAKE_TARGETS}"
++		;;
++
++		*)
++			echo "Unsupported platform \${platform}" >&2
++			exit 1
++		;;
++	esac
++done
++
++if [ "\$MAKE_TARGETS" ]; then
++	sed -e "s/@MAKE_TARGETS@/\$MAKE_TARGETS/g" < "\${SRCDIR}"/Makefile-multiarch.in > Makefile
++	for target in \$MAKE_TARGETS; do
++		mkdir build_\$target
++		pushd build_\$target >/dev/null
++		echo "Running configure for platform \$target"
++		\${SRCDIR}/configure.grub \$CONFIG_ARGS --with-platform=\$target || exit 1
++		popd >/dev/null
++	done
++else
++	# emulate normal configure behavior
++	\${SRCDIR}/configure.grub \$CONFIG_ARGS || exit 1
++fi
++EOS
++chmod 0755 configure
++
