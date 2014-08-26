@@ -69,7 +69,7 @@ namespace :toolchain do
   desc "Create a tar archive of the toolchain binaries"
   task :archive => ['toolchain:build', 'toolchain:clean'] do
     Dir.chdir( 'toolchain' ) do
-      sh "tar -cjf ../toolchain-#{RUBY_PLATFORM}-#{TC_RELEASE}.tar.bz2 ."
+      sh "tar -cjf ../toolchain-#{RUBY_PLATFORM}-#{TC_RELEASE}#{ENV['TRAVIS'] ? '_travis' : ''}.tar.bz2 ."
     end
   end
 
@@ -104,6 +104,7 @@ namespace :toolchain do
           unless $silent.empty?
             # no progress on Travis-CI builds
             progress_proc = lambda { |size| true }
+            puts ".. fetching #{source_arch}..."
           end
 
           URI.parse( meta[ :uri ] ).open( {
