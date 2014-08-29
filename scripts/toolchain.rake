@@ -209,7 +209,8 @@ namespace :toolchain do
             sh "../../src/#{File.basename( source_path )}/configure #{conf_flags.join( ' ' )} #{$silent}"
 
             unless meta.has_key? :targets
-              sh "make #{ '> build.log 2>&1' unless $silent.empty?} && make install #{$silent}"
+              sh "make #{ '> build.log 2>&1' unless $silent.empty?}"
+              sh "make install-strip #{$silent} || make install #{$silent}"
             else
               # build only specific targets
               meta[ :targets ].each do |target|
