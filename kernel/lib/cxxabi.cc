@@ -20,10 +20,11 @@
 *******************************************************************************/
 
 /*
- * C++ runtime initialization and destruction
+ * C++ runtime initialization and destruction and other helpers
  * ..mostly functions required by the `Itanium C++ Application Binary Interface'
  */
 #include <stddef.h>
+#include <stdint.h>
 
 #define CXXRT_MAX_ATEXIT_FUNCS 256 /* who want's 256 global class instances? */
 
@@ -41,6 +42,11 @@ size_t __atexit_func_count = 0;
 extern "C" int __cxa_atexit( void ( * )( void * ), void *, void * );
 extern "C" void __cxa_finalize( void * );
 extern "C" void __cxa_pure_virtual( void );
+
+typedef uint64_t __guard __attribute__( ( mode( __DI__ ) ) );
+
+extern "C" int __cxa_guard_acquire( __guard * );
+extern "C" void __cxa_guard_release( __guard * );
 
 extern "C" int
 __cxa_atexit( void ( *destructor_func )( void * ), void *p_obj, void *p_dso )
@@ -102,3 +108,28 @@ __cxa_pure_virtual( void )
 {
 	/* FIXME: panic() ? */
 }
+
+static __guard guard_mutex = 0;
+
+extern "C" int
+__cxa_guard_acquire( __guard *g )
+{
+	do{}while( __sync_lock_test_and_set( &guard_mutex, 1 ) );
+	if( *g == 2 )
+	{
+		__sync_lock_release( &guard_mutex );
+		return 0;
+	}
+
+	/* FIXME: if( *g == 1 ){} should be checked too.. */
+
+	*g = 1;
+	return 1;
+}
+
+extern "C" void __cxa_guard_release( __guard *g )
+{
+	*g = 2;
+	__sync_lock_release( &guard_mutex );
+}
+
