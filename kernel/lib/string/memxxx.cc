@@ -95,8 +95,8 @@ _BUILTIN( memmove( void *s1, void *s2, size_t n ) )
 		if( s1 != 0 && s2 != 0 && n > 0 )
 		{
 			/* buffers may overlap, only copy the part that needs changing.. */
-			uint8_t *c1 = ( uint8_t* )( ( ptrdiff_t )s1 + n ),
-			        *c2 = ( uint8_t* )( ( ptrdiff_t )s2 + n );
+			uint8_t *c1 = ( uint8_t* )( ( uintptr_t )s1 + n ),
+			        *c2 = ( uint8_t* )( ( uintptr_t )s2 + n );
 
 			//c1 = &c1[n];
 			//c2 = &c2[n];

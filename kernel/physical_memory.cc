@@ -162,8 +162,8 @@ init( const multiboot_info_t *boot_info )
 		             mem_map->type == 1 ? "free" : "rsvd",
 		             mem_map->type );
 
-		mem_map = ( multiboot_memory_map_t* )( ( ptrdiff_t )mem_map + mem_map->size + sizeof( mem_map->size ) );
-	} while( ( ptrdiff_t)mem_map < boot_info->mmap_addr + boot_info->mmap_length );
+		mem_map = ( multiboot_memory_map_t* )( ( uintptr_t )mem_map + mem_map->size + sizeof( mem_map->size ) );
+	} while( ( uintptr_t)mem_map < boot_info->mmap_addr + boot_info->mmap_length );
 
 	memory_map_size = last_chunk_end / PAGE_SIZE / 8;
 	memory_upper_bound = last_chunk_end;
@@ -183,19 +183,19 @@ init( const multiboot_info_t *boot_info )
 	log::printk( "-----------------------------------------\n" );
 
 	/* check for the first free location that has enough space */
-	first_free  = ( ptrdiff_t )__end - KERNEL_VMA;
+	first_free  = ( uintptr_t )__end - KERNEL_VMA;
 
 	if( boot_info-> flags & MULTIBOOT_INFO_MODS )
 	{
-		multiboot_module_t *mod_list = ( multiboot_module_t* )( ( ptrdiff_t )boot_info->mods_addr );
+		multiboot_module_t *mod_list = ( multiboot_module_t* )( ( uintptr_t )boot_info->mods_addr );
 		for( size_t i = 0; i < boot_info->mods_count; ++i )
 		{
 			if( mod_list[i].mod_start > first_free )
 			{
 				first_free = mod_list[i].mod_end;
-				if( ( ptrdiff_t )mod_list[i].cmdline > first_free )
+				if( ( uintptr_t )mod_list[i].cmdline > first_free )
 				{
-					const char* cmdline = ( const char* )( ( ptrdiff_t )mod_list[i].cmdline );
+					const char* cmdline = ( const char* )( ( uintptr_t )mod_list[i].cmdline );
 					first_free = mod_list[i].cmdline + strlen( cmdline );
 				}
 			}
@@ -234,8 +234,8 @@ init( const multiboot_info_t *boot_info )
 		{
 			_mark_free_range( mem_map->addr, mem_map->len );
 		}
-		mem_map = ( multiboot_memory_map_t* )( ( ptrdiff_t )mem_map + mem_map->size + sizeof( mem_map->size ) );
-	} while( ( ptrdiff_t)mem_map < boot_info->mmap_addr + boot_info->mmap_length );
+		mem_map = ( multiboot_memory_map_t* )( ( uintptr_t )mem_map + mem_map->size + sizeof( mem_map->size ) );
+	} while( ( uintptr_t)mem_map < boot_info->mmap_addr + boot_info->mmap_length );
 
 	log::printk( "Physical memory map at %p\n"
 	             "-- %u entries, %u free (spanning %lu MB)\n",
@@ -253,7 +253,7 @@ set_physical_base_offset( const uint64_t offset )
 	/* change the expected location of the memory map and set the offset for
 	 * physical addresses used alloc_page() and free_page()
 	 */
-	memory_map_data = ( uint32_t* )( ( ptrdiff_t )memory_map_data - memory_map_base + offset );
+	memory_map_data = ( uint32_t* )( ( uintptr_t )memory_map_data - memory_map_base + offset );
 	memory_map_base = offset;
 
 	log::printk( "Physical memory map relocated to %p\n", memory_map_data );
