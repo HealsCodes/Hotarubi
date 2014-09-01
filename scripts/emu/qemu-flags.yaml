@@ -1,0 +1,8 @@
+:bin: qemu-system-x86_64
+:base_flags:
+- -cpu Penryn,check
+- -smp cpus=4,cores=2,threads=2,sockets=2
+- -m 16384
+- -debugcon mon:stdio
+#machine q35
+#size=16384,maxmem=32768,slots=4
