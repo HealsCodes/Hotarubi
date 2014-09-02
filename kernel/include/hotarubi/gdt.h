@@ -19,32 +19,14 @@
 
 *******************************************************************************/
 
-/* high-level language kernel-entry and main initialization */
+/* Global Descriptor Table manipulation */
 
-#include <stdint.h>
-#include <hotarubi/boot/multiboot.h>
-#include <hotarubi/log/log.h>
-#include <hotarubi/memory.h>
-#include <hotarubi/gdt.h>
+#ifndef _GDT_H
+#define _GDT_H 1
 
-extern "C" void _init( void );
-
-extern "C" void
-kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
+namespace GDT
 {
-	_init();
+	void init( void );
+};
 
-	log::init_printk();
-	log::register_debug_output();
-
-	log::printk( "-- reached %s --\n", __FUNCTION__ );
-	log::printk( "loader magic: %#08x\n", loader_magic );
-	log::printk( "loader data : %p\n", multiboot_info );
-
-	memory::physmm::init( multiboot_info );
-	memory::virtmm::init();
-
-	gdt::init();
-
-	__UNDER_CONSTRUCTION__;
-}
+#endif
