@@ -25,7 +25,7 @@
 #include <string.h>
 #include <bitmask.h>
 
-namespace GDT
+namespace gdt
 {
 
 enum GDTTypeSet
