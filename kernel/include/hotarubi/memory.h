@@ -22,6 +22,7 @@
 #ifndef __MEMORY_H
 #define __MEMORY_H 1
 
+#include <bitmask.h>
 #include <hotarubi/boot/multiboot.h>
 
 namespace memory
@@ -56,6 +57,7 @@ namespace virtmm
 		kPageFlagGlobal       = 1 << 8,
 		kPageFlagNoExecute    = 0x8000000000000000,
 	};
+	BITMASK( PageFlagSystemSet );
 
 	void init( void );
 };
