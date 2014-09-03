@@ -1,7 +1,8 @@
 require 'yaml'
 require 'rake/task_arguments'
 
-QEMU = YAML::load_file( "#{File.dirname( __FILE__ )}/qemu-flags.yaml" )
+QEMU = YAML::load_file( "#{File.dirname( __FILE__ )}/qemu-flags.yml" )
+QEMU.merge!( YAML::load_file( 'qemu-flags.yml' ) ) if File.exists?( 'qemu-flags.yml' )
 namespace :run do
   namespace :qemu do
     
