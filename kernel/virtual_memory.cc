@@ -66,7 +66,7 @@ namespace virtmm
 static uint64_t *system_pml4 = nullptr;
 
 static bool
-_map_region( uint64_t *pml4, uint64_t vaddr, uint64_t paddr, size_t len,
+_map_region( uint64_t *pml4, uintptr_t vaddr, uintptr_t paddr, size_t len,
              PageFlagSystemSet flags=kPageFlagNone )
 {
 	uint64_t *pdpt = nullptr,
@@ -95,7 +95,7 @@ _map_region( uint64_t *pml4, uint64_t vaddr, uint64_t paddr, size_t len,
 				return false;
 			}
 			memset( pdpt, 0, PAGE_SIZE );
-			pml4[MMU_PML4_INDEX( vaddr )] = PHYS_ADDR( ( uint64_t )pdpt ) | kPageFlagPresent;
+			pml4[MMU_PML4_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdpt ) | kPageFlagPresent;
 		}
 
 		pdt = ( uint64_t* )MMU_PDT_ADDR( pdpt, vaddr );
@@ -106,7 +106,7 @@ _map_region( uint64_t *pml4, uint64_t vaddr, uint64_t paddr, size_t len,
 				return false;
 			}
 			memset( pdt, 0, PAGE_SIZE );
-			pdpt[MMU_PDPT_INDEX( vaddr )] = PHYS_ADDR( ( uint64_t )pdt ) | kPageFlagPresent;
+			pdpt[MMU_PDPT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdt ) | kPageFlagPresent;
 		}
 
 		pt = ( uint64_t* )MMU_PT_ADDR( pdt, vaddr );
@@ -117,7 +117,7 @@ _map_region( uint64_t *pml4, uint64_t vaddr, uint64_t paddr, size_t len,
 				return false;
 			}
 			memset( pt, 0, PAGE_SIZE );
-			pdt[MMU_PDT_INDEX( vaddr )] = PHYS_ADDR( ( uint64_t )pt ) | kPageFlagPresent;
+			pdt[MMU_PDT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pt ) | kPageFlagPresent;
 		}
 
 		pt[MMU_PT_INDEX( vaddr )] = paddr | kPageFlagPresent | flags;
@@ -152,16 +152,16 @@ void _create_system_vm( void )
 
 	/* map kernel .text (ro) */
 	if( !_map_region( system_pml4, 
-	                  ( uint64_t )__text, ( uint64_t )__text - kVMRangeKernelBase,
-	                  ( uint64_t )__data - ( uint64_t )__text ) )
+	                  ( uintptr_t )__text, ( uintptr_t )__text - kVMRangeKernelBase,
+	                  ( uintptr_t )__data - ( uintptr_t )__text ) )
 	{
 		goto error_out;
 	}
 
 	/* map kernel .data and .bss (rw) */
 	if( !_map_region( system_pml4, 
-	                  ( uint64_t )__data, ( uint64_t )__data -  kVMRangeKernelBase,
-	                  ( uint64_t )__end - ( uint64_t )__data,
+	                  ( uintptr_t )__data, ( uintptr_t )__data -  kVMRangeKernelBase,
+	                  ( uintptr_t )__end - ( uintptr_t )__data,
 	                  kPageFlagWritable ) )
 	{
 		goto error_out;
@@ -189,7 +189,7 @@ init( void )
 
 	/* be bold and activate the new PML4 */
 	log::printk( "Switching to kernel virtual address space..\n");
-	processor::regs::write_cr3( ( uint64_t )system_pml4 );
+	processor::regs::write_cr3( ( uintptr_t )system_pml4 );
 
 	/* relocate the memory bitmap */
 	physmm::set_physical_base_offset( kVMRangePhysMemBase );
