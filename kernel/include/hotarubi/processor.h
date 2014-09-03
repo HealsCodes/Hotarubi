@@ -28,6 +28,35 @@
 
 namespace processor
 {
+	inline uint64_t read_flags( void )
+	{
+		uint64_t r;
+		__asm__ __volatile__( 
+			"pushf\n"
+			"pop %0\n"
+			: "=r"( r )
+		);
+		return r;
+	};
+
+	inline void write_flags( uint64_t flags )
+	{
+		__asm__ __volatile__(
+			"push %0\n"
+			"popf \n"
+			:: "r"( flags )
+		);
+	};
+
+	inline void disable_interrupts( void )
+	{
+		__asm__ __volatile__( "cli" );
+	};
+
+	inline void enable_interrupts( void )
+	{
+		__asm__ __volatile__( "sti" );
+	};
 
 namespace regs
 {
