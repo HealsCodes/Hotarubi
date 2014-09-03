@@ -23,7 +23,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#include <hotarubi/io.h>
+#include <hotarubi/processor.h>
 
 #include <hotarubi/memory.h>
 #include <hotarubi/vmconst.h>
@@ -189,7 +189,7 @@ init( void )
 
 	/* be bold and activate the new PML4 */
 	log::printk( "Switching to kernel virtual address space..\n");
-	io::write_cr3( ( uint64_t )system_pml4 );
+	processor::regs::write_cr3( ( uint64_t )system_pml4 );
 
 	/* relocate the memory bitmap */
 	physmm::set_physical_base_offset( kVMRangePhysMemBase );
