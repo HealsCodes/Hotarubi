@@ -26,6 +26,7 @@
 #include <hotarubi/memory.h>
 #include <hotarubi/vmconst.h>
 
+#include <hotarubi/lock.h>
 #include <hotarubi/log/log.h>
 
 #ifdef KERNEL
@@ -41,7 +42,7 @@ static uint32_t *memory_map_data = nullptr;
 static uint32_t  memory_map_size = 0;
 static uint32_t  memory_map_used = 0;
 static uint64_t  memory_map_base = 0; /* offset applied to physical addresses */
-static uint8_t   memory_map_lock = 0;
+static SpinLock  memory_map_lock;
 uint64_t memory_upper_bound = 0;
 
 static inline bool
@@ -290,21 +291,21 @@ alloc_page( void )
 {
 	uint64_t addr;
 
-	do {} while( __sync_lock_test_and_set( &memory_map_lock, 1 ) );
+	memory_map_lock.lock();
 	if( free_page_count() == 0 )
 	{
-		__sync_lock_release( &memory_map_lock );
+		memory_map_lock.unlock();
 		return nullptr;
 	}
 	addr = _search_first_free();
 	if( addr == 0 )
 	{
-		__sync_lock_release( &memory_map_lock );
+		memory_map_lock.unlock();
 		return nullptr;
 	}
 
 	_mark_used_range( addr, PAGE_SIZE );
-	__sync_lock_release( &memory_map_lock );
+	memory_map_lock.unlock();
 
 	return ( void* )( addr + memory_map_base );
 }
@@ -330,9 +331,9 @@ free_page( const void* page )
 		return;
 	}
 
-	do {} while( __sync_lock_test_and_set( &memory_map_lock, 1 ) );
+	memory_map_lock.lock();
 	_mark_free_range( addr, PAGE_SIZE );
-	__sync_lock_release( &memory_map_lock );
+	memory_map_lock.unlock();
 }
 
 };

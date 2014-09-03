@@ -25,7 +25,9 @@
 #include <stddef.h>
 #include <string.h>
 #include <_vcbprintf.h>
+
 #include <hotarubi/io.h>
+#include <hotarubi/lock.h>
 
 namespace log
 {
@@ -34,10 +36,8 @@ struct ring_buffer
 {
 	char *data;
 	size_t in, out, len;
-	/* FIXME: this should be a propper spinlock */
-	uint8_t lock;
+	SpinLock lock;
 
-	/* FIXME: part of the emit_early_debug hack */
 	size_t ( *callback )( void *p, const char *str, size_t n );
 };
 
@@ -90,7 +90,6 @@ init_printk( void )
 	logring.in  = 0;
 	logring.out = 0;
 	logring.len = sizeof( logbuffer );
-	logring.lock = 0;
 	logring.callback = emit;
 
 	memset( logbuffer, 0, sizeof( logbuffer ) );
@@ -102,30 +101,30 @@ printk( const char *fmt, ... )
 	int rc;
 	va_list ap;
 
-	do {} while( __sync_lock_test_and_set( &logring.lock, 1 ) );
+	logring.lock.lock();
 
 	va_start( ap, fmt );
 	rc = _vcbprintf( &logring, logring.callback, fmt, ap );
 	va_end( ap );
 
-	__sync_lock_release( &logring.lock );
+	logring.lock.unlock();
 	return rc;
 }
 
 void
 register_debug_output( void )
 {
-	do{} while( __sync_lock_test_and_set( &logring.lock, 1 ) );
+	logring.lock.lock();
 	logring.callback = emit_early_debug;
-	__sync_lock_release( &logring.lock );
+	logring.lock.unlock();
 }
 
 void
 unregister_debug_output( void )
 {
-	do{} while( __sync_lock_test_and_set( &logring.lock, 1 ) );
+	logring.lock.lock();
 	logring.callback = emit;
-	__sync_lock_release( &logring.lock );
+	logring.lock.unlock();
 }
 
 };
