@@ -155,6 +155,21 @@ TEST( memory_map, _search_first_free )
 	EXPECT_EQ( 0x00000, memory::physmm::_search_first_free() );
 }
 
+TEST( memory_map, _search_first_free_range )
+{
+	uint32_t map_1[] = { 0x3fffffcd, 0xfffffff8 };
+
+	SET_MEMORY_MAP( map_1, 63 );
+	// linear and no-match test
+	EXPECT_EQ(       0, memory::physmm::_search_first_free_range( 0 ) );
+	EXPECT_EQ( 0x01000, memory::physmm::_search_first_free_range( 1 ) );
+	EXPECT_EQ( 0x04000, memory::physmm::_search_first_free_range( 2 ) );
+	// wrap-around match tests
+	EXPECT_EQ( 0x1e000, memory::physmm::_search_first_free_range( 3 ) );
+	EXPECT_EQ( 0x1e000, memory::physmm::_search_first_free_range( 4 ) );
+}
+
+
 TEST( physmm, alloc_page )
 {
 	uint32_t map[] = { 0xfffffff1, 0xffffffff };
@@ -175,6 +190,20 @@ TEST( physmm, alloc_page )
 	EXPECT_EQ( 0         , memory::physmm::free_page_count() );
 
 	EXPECT_EQ( nullptr, memory::physmm::alloc_page() );
+}
+
+TEST( physmm, alloc_page_range )
+{
+	uint32_t map[] = { 0xfffffff1, 0xffffffff };
+
+	SET_MEMORY_MAP( map, 61 );
+	EXPECT_EQ( 3, memory::physmm::free_page_count() );
+
+	EXPECT_EQ( 0x1000    , ( uintptr_t )memory::physmm::alloc_page_range( 2 ) );
+	EXPECT_EQ( 0xfffffff7, map[0] );
+	EXPECT_EQ( 1         , memory::physmm::free_page_count() );
+
+	EXPECT_EQ( nullptr, memory::physmm::alloc_page_range( 2 ) );
 }
 
 TEST( physmm, free_page )
@@ -202,4 +231,36 @@ TEST( physmm, free_page )
 	EXPECT_EQ( 0xfffffff9, map[0] );
 	EXPECT_EQ( 0xffffffff, map[1] );
 	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
+}
+
+TEST( physmm, free_page_range )
+{
+	uint32_t map[] = { 0xffffffff, 0xffffffff };
+
+	SET_MEMORY_MAP( map, 64 );
+
+	memory::physmm::free_page_range( ( void* )0x1000, 1 );
+	EXPECT_EQ( 0xfffffffd, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 1         , memory::physmm::free_page_count() );
+
+	memory::physmm::free_page_range( ( void* )0x2000, 2 );
+	EXPECT_EQ( 0xfffffff1, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 3         , memory::physmm::free_page_count() );
+
+	memory::physmm::free_page_range( ( void* )0x0, 1 );
+	EXPECT_EQ( 0xfffffff1, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 3         , memory::physmm::free_page_count() );
+
+	memory::physmm::free_page_range( ( void* )0x40000, 32 ); // out of memory-map
+	EXPECT_EQ( 0xfffffff1, map[0] );
+	EXPECT_EQ( 0xffffffff, map[1] );
+	EXPECT_EQ( 3         , memory::physmm::free_page_count() );
+
+	memory::physmm::free_page_range( ( void* )0x3f000, 32 ); // should free only 1
+	EXPECT_EQ( 0xfffffff1, map[0] );
+	EXPECT_EQ( 0x7fffffff, map[1] );
+	EXPECT_EQ( 4         , memory::physmm::free_page_count() );
 }

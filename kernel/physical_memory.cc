@@ -118,6 +118,44 @@ _search_first_free( void )
 	return 0;
 }
 
+static inline uint64_t
+_search_first_free_range( unsigned num )
+{
+	if( num <= 1 )
+	{
+		return ( num == 0 ) ? 0 : _search_first_free();
+	}
+
+	/* TODO: faster version using masks! */
+	for( size_t i = 0; i < memory_map_size / sizeof( memory_map_data[0] ); ++i )
+	{
+		if( memory_map_data[i] != 0xffffffff )
+		{
+			for( uint64_t bit = 0; bit < 32; ++bit )
+			{
+				if( _peek_used( i * 32 + bit ) == false )
+				{
+					bool match = true;
+					for( size_t n = 1; n < num; ++n )
+					{
+						if( _peek_used( i * 32 + ( bit + n ) ) == true )
+						{
+							match = false;
+							break;
+						}
+					}
+
+					if( match )
+					{
+						return ( i * 32 + bit ) * PAGE_SIZE;
+					}
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 #ifdef KERNEL
 
 void
@@ -266,20 +304,6 @@ physical_base_offset( void )
 	return memory_map_base;
 }
 
-size_t
-free_memory_for_bootstrap( void )
-{
-	size_t res = 0;
-	for( uint64_t bit = BOOT_MAX_MAPPED / PAGE_SIZE; bit > 1; --bit )
-	{
-		if( _peek_used( bit ) == false )
-		{
-			res += PAGE_SIZE;
-		}
-	}
-	return res;
-}
-
 uint32_t
 free_page_count( void )
 {
@@ -310,6 +334,35 @@ alloc_page( void )
 	return ( void* )( addr + memory_map_base );
 }
 
+void*
+alloc_page_range( unsigned count )
+{
+	uint64_t addr;
+
+	if( count <= 1 )
+	{
+		return alloc_page();
+	}
+
+	memory_map_lock.lock();
+	if( count < 1 || free_page_count() < count )
+	{
+		memory_map_lock.unlock();
+		return nullptr;
+	}
+	addr = _search_first_free_range( count );
+	if( addr == 0 )
+	{
+		memory_map_lock.unlock();
+		return nullptr;
+	}
+
+	_mark_used_range( addr, PAGE_SIZE * count );
+	memory_map_lock.unlock();
+
+	return ( void* )( addr + memory_map_base );
+}
+
 void
 free_page( const void* page )
 {
@@ -334,6 +387,45 @@ free_page( const void* page )
 	memory_map_lock.lock();
 	_mark_free_range( addr, PAGE_SIZE );
 	memory_map_lock.unlock();
+}
+
+void
+free_page_range( const void* page, unsigned count )
+{
+	uint64_t addr = ( uint64_t )page;
+
+	if( addr >= memory_map_base )
+	{
+		addr -= memory_map_base;
+	}
+
+	if( addr < PAGE_SIZE )
+	{
+		/* prevent freeing of the first 4K */
+		return;
+	}
+
+	if( count < 1 )
+	{
+		count = 1;
+	}
+
+	do {
+		uint64_t end_addr = addr + count * PAGE_SIZE;
+		if( end_addr / PAGE_SIZE / 32 + end_addr / PAGE_SIZE % 32 < memory_map_size * 8 )
+		{
+			/* prevent out-of-bounds access */
+			break;
+		}
+		--count;
+	} while( count );
+
+	if( count )
+	{
+		memory_map_lock.lock();
+		_mark_free_range( addr, count * PAGE_SIZE );
+		memory_map_lock.unlock();
+	}
 }
 
 };

@@ -34,11 +34,13 @@ namespace physmm
 	void set_physical_base_offset( const uint64_t offset );
 	uint64_t physical_base_offset( void );
 
-	size_t free_memory_for_bootstrap( void );
 	uint32_t free_page_count( void );
 
 	void *alloc_page( void );
+	void *alloc_page_range( unsigned count );
+
 	void free_page( const void *page );
+	void free_page_range( const void *page, unsigned count );
 };
 
 namespace virtmm
