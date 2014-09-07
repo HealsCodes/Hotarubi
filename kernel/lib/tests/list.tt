@@ -1,0 +1,254 @@
+/*******************************************************************************
+
+    Copyright (C) 2014  René 'Shirk' Köcher
+ 
+    This file is part of Hotarubi.
+
+    Hotarubi is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+ 
+    Hotarubi is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+ 
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*******************************************************************************/
+
+/* singly and doubly-linked lists */
+
+#include "gtest/gtest.h"
+#include "../../include/list.h"
+
+struct list_item
+{
+	int id;
+	LIST_LINK( items );
+};
+
+static list_item a = { .id = 1 }, 
+                 b = { .id = 2 },
+                 c = { .id = 3 };
+
+LIST_HEAD( test_list );
+
+TEST( list, init )
+{
+	INIT_LIST( test_list );
+	EXPECT_EQ( true, list_empty( &test_list ) );
+}
+
+TEST( list, add )
+{
+	INIT_LIST( test_list );
+
+	list_add( &test_list, &a.items );
+	EXPECT_EQ( 1, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+
+	list_add( &test_list, &b.items );
+	EXPECT_EQ( 2, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+
+	list_add( &test_list, &c.items );
+	EXPECT_EQ( 3, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+}
+
+TEST( list, add_tail )
+{
+	INIT_LIST( test_list );
+
+	list_add_tail( &test_list, &a.items );
+	EXPECT_EQ( 1, LIST_TAIL_ENTRY( &test_list, struct list_item, items )->id );
+	EXPECT_EQ( 1, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+
+	list_add_tail( &test_list, &b.items );
+	EXPECT_EQ( 2, LIST_TAIL_ENTRY( &test_list, struct list_item, items )->id );
+	EXPECT_EQ( 1, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+
+	list_add_tail( &test_list, &c.items );
+	EXPECT_EQ( 3, LIST_TAIL_ENTRY( &test_list, struct list_item, items )->id );
+	EXPECT_EQ( 1, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+}
+
+TEST( list, del )
+{
+	INIT_LIST( test_list );
+
+	list_add( &test_list, &a.items );
+	list_add( &test_list, &b.items );
+	list_add( &test_list, &c.items );
+
+	EXPECT_EQ( false, list_empty( &test_list ) );
+	EXPECT_EQ( 3, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+
+	list_del( &c.items );
+	EXPECT_EQ( false, list_empty( &test_list ) );
+	EXPECT_EQ( 2, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+
+	list_del( &b.items );
+	EXPECT_EQ( false, list_empty( &test_list ) );
+	EXPECT_EQ( 1, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+
+	list_del( &a.items );
+	EXPECT_EQ( true, list_empty( &test_list ) );
+}
+
+TEST( list, foreach )
+{
+	INIT_LIST( test_list );
+	list_add( &test_list, &a.items );
+	list_add( &test_list, &b.items );
+	list_add( &test_list, &c.items );
+
+	int expected_index = 3;
+	LIST_FOREACH( item, &test_list )
+	{
+		EXPECT_EQ( expected_index--, LIST_ENTRY( item, struct list_item, items )->id );
+	}
+}
+
+TEST( list, foreach_reverse )
+{
+	INIT_LIST( test_list );
+	list_add( &test_list, &a.items );
+	list_add( &test_list, &b.items );
+	list_add( &test_list, &c.items );
+
+	int expected_index = 1;
+	LIST_FOREACH_REVERSE( item, &test_list )
+	{
+		EXPECT_EQ( expected_index++, LIST_ENTRY( item, struct list_item, items )->id );
+	}
+}
+
+TEST( list, foreach_mutable )
+{
+	INIT_LIST( test_list );
+	list_add( &test_list, &a.items );
+	list_add( &test_list, &b.items );
+	list_add( &test_list, &c.items );
+
+	int expected_index = 3;
+	LIST_FOREACH_MUTABLE( item, &test_list )
+	{
+		EXPECT_EQ( expected_index, LIST_ENTRY( item, struct list_item, items )->id );
+		if( expected_index-- == 2 )
+		{
+			/* the iteration should still finish up to 1 */
+			list_del( item );
+		}
+	}
+	EXPECT_EQ( expected_index, 0 );
+	EXPECT_EQ( 3, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+	EXPECT_EQ( 1, LIST_TAIL_ENTRY( &test_list, struct list_item, items )->id );
+}
+
+TEST( list, foreach_mutable_reverse )
+{
+	INIT_LIST( test_list );
+	list_add( &test_list, &a.items );
+	list_add( &test_list, &b.items );
+	list_add( &test_list, &c.items );
+
+	int expected_index = 1;
+	LIST_FOREACH_MUTABLE_REVERSE( item, &test_list )
+	{
+		EXPECT_EQ( expected_index, LIST_ENTRY( item, struct list_item, items )->id );
+		if( expected_index++ == 2 )
+		{
+			/* the iteration should still finish up to 3 */
+			list_del( item );
+		}
+	}
+	EXPECT_EQ( expected_index, 4 );
+	EXPECT_EQ( 3, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
+	EXPECT_EQ( 1, LIST_TAIL_ENTRY( &test_list, struct list_item, items )->id );
+}
+
+/* slist tests */
+
+struct slist_item
+{
+	int id;
+	SLIST_LINK( items );
+};
+
+static slist_item d = { .id = 1 }, 
+                  e = { .id = 2 },
+                  f = { .id = 3 };
+
+SLIST_HEAD( test_slist );
+
+TEST( slist, init )
+{
+	INIT_SLIST( test_slist );
+	EXPECT_EQ( true, slist_empty( &test_slist ) );
+}
+
+TEST( slist, add )
+{
+	INIT_SLIST( test_slist );
+
+	slist_add( &test_slist, &d.items );
+	EXPECT_EQ( 1, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
+
+	slist_add( &test_slist, &e.items );
+	EXPECT_EQ( 2, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
+
+	slist_add( &test_slist, &f.items );
+	EXPECT_EQ( 3, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
+}
+
+TEST( slist, add_tail )
+{
+	INIT_SLIST( test_slist );
+
+	slist_add_tail( &test_slist, &d.items );
+	EXPECT_EQ( 1, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
+
+	slist_add_tail( &test_slist, &e.items );
+	EXPECT_EQ( 1, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
+
+	slist_add_tail( &test_slist, &f.items );
+	EXPECT_EQ( 1, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
+}
+
+TEST( slist, del )
+{
+	INIT_SLIST( test_slist );
+
+	slist_add( &test_slist, &d.items );
+	slist_add( &test_slist, &e.items );
+	slist_add( &test_slist, &f.items );
+
+	EXPECT_EQ( false, slist_empty( &test_slist ) );
+	EXPECT_EQ( 3, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
+
+	slist_del( &test_slist, &f.items );
+	EXPECT_EQ( false, slist_empty( &test_slist ) );
+	EXPECT_EQ( 2, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
+
+	slist_del( &test_slist, &e.items );
+	EXPECT_EQ( false, slist_empty( &test_slist ) );
+	EXPECT_EQ( 1, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
+
+	slist_del( &test_slist, &d.items );
+	EXPECT_EQ( true, slist_empty( &test_slist ) );
+}
+
+TEST( slist, foreach )
+{
+	INIT_SLIST( test_slist );
+	slist_add( &test_slist, &d.items );
+	slist_add( &test_slist, &e.items );
+	slist_add( &test_slist, &f.items );
+
+	int expected_index = 3;
+	SLIST_FOREACH( item, &test_slist )
+	{
+		EXPECT_EQ( expected_index--, SLIST_ENTRY( item, struct slist_item, items )->id );
+	}
+}
