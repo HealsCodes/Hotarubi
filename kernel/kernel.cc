@@ -44,6 +44,7 @@ kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
 	gdt::init();
 	memory::physmm::init( multiboot_info );
 	memory::virtmm::init();
+	memory::cache::init();
 
 	__UNDER_CONSTRUCTION__;
 }
