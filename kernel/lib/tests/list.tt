@@ -252,3 +252,24 @@ TEST( slist, foreach )
 		EXPECT_EQ( expected_index--, SLIST_ENTRY( item, struct slist_item, items )->id );
 	}
 }
+
+TEST( slist, foreach_mutable )
+{
+	INIT_SLIST( test_slist );
+	slist_add( &test_slist, &d.items );
+	slist_add( &test_slist, &e.items );
+	slist_add( &test_slist, &f.items );
+
+	int expected_index = 3;
+	SLIST_FOREACH_MUTABLE( item, &test_slist )
+	{
+		EXPECT_EQ( expected_index, SLIST_ENTRY( item, struct slist_item, items )->id );
+		if( expected_index-- == 2 )
+		{
+			/* the iteration should still finish up to 1 */
+			slist_del( &test_slist, item );
+		}
+	}
+	EXPECT_EQ( expected_index, 0 );
+	EXPECT_EQ( 3, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
+}

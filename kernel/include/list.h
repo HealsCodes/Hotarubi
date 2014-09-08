@@ -131,7 +131,7 @@ static inline bool list_empty( struct list_head *head )
  * O(n) insertion at the list tail as well as member deletion.
  * 
  * The SLIST_FOREACH_* macro provides a shortcut to iterate over the members of 
- * the list.
+ * the list with support for item deletion by using the _MUTABLE version.
  */
 struct slist_head
 {
@@ -140,7 +140,7 @@ struct slist_head
 
 #define SLIST_HEAD( name ) struct slist_head name
 #define SLIST_LINK( name ) struct slist_head name
-#define SLIST_INIT( name ) { nullptr }
+#define SLIST_INIT( name ) { &name }
 
 #define INIT_SLIST( name ) name = SLIST_INIT( name )
 
@@ -153,12 +153,19 @@ struct slist_head
 /* iterate over each link in the list */
 #define SLIST_FOREACH( ptr, head ) \
 	for( struct slist_head *ptr = ( head )->next; \
-	     ptr != nullptr; \
+	     ptr != ( head ); \
 	     ptr  = ptr->next )
+
+#define SLIST_FOREACH_MUTABLE( ptr, head ) \
+	for( struct slist_head *ptr = ( head )->next, \
+		                   *ref = ptr->next; \
+		ptr != ( head ); \
+		ptr  = ref, \
+		ref  = ptr->next )
 
 static inline bool slist_empty( struct slist_head *head )
 {
-	return head->next == nullptr;
+	return head->next == head;
 };
 
 static inline void slist_add( struct slist_head *head, struct slist_head *elem )
