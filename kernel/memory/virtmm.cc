@@ -25,8 +25,9 @@
 
 #include <hotarubi/processor.h>
 
-#include <hotarubi/memory.h>
-#include <hotarubi/vmconst.h>
+#include <hotarubi/memory/physmm.h>
+#include <hotarubi/memory/virtmm.h>
+#include <hotarubi/memory/const.h>
 
 #include <hotarubi/log/log.h>
 #include <hotarubi/boot/multiboot.h>

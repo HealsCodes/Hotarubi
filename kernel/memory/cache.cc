@@ -21,11 +21,19 @@
 
 /* SLAB based cache allocator */
 
+/* TODO: replace the obj_map with a faster hash based version
+ * TODO: add coloring to the SLAB buffers
+ * TODO: maybe support per-core caches to get around any locking at all
+ */
+
 #include <hotarubi/lock.h>
 #include <hotarubi/log/log.h>
 
-#include <hotarubi/memory.h>
-#include <hotarubi/vmconst.h>
+#include <hotarubi/memory/cache.h>
+
+#ifdef KERNEL
+#include <hotarubi/memory/physmm.h>
+#endif
 
 #include <string.h>
 #include <list.h>

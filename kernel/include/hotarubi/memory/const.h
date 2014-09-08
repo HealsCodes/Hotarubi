@@ -19,12 +19,43 @@
 
 *******************************************************************************/
 
-#ifndef __MEMORY_H
-#define __MEMORY_H 1
+/* basic virtual memory layout definitions */
 
-#include <hotarubi/memory/physmm.h>
-#include <hotarubi/memory/virtmm.h>
-#include <hotarubi/memory/cache.h>
-#include <hotarubi/memory/const.h>
+#ifndef __MEMORY_CONST_H
+#define __MEMORY_CONST_H 1
+
+#include <hotarubi/boot/bootmem.h>
+
+#define PAGE_SIZE 0x1000
+
+namespace memory
+{
+namespace virtmm
+{
+
+	enum VirtualMemoryRangeSet
+	{
+		kVMRangeUserBase    = 0x0000000000000000ULL,
+		kVMRangeUserEnd     = 0x00007fffffffffffULL,
+
+		kVMRangeGuard1Base  = 0xffff800000000000UL,
+		kVMRangeGuard1End   = 0xffff80ffffffffffUL,
+
+		kVMRangePhysMemBase = 0xffff880000000000UL,
+		kVMRangePhysMemEnd  = 0xffffc7ffffffffffUL,
+
+		kVMRangeGuard2Base  = 0xffffc80000000000UL,
+		kVMRangeGuard2End   = 0xffffc8ffffffffffUL,
+
+		kVMRangeHeapBase    = 0xffffc90000000000UL,
+		kVMRangeHeapEnd     = 0xffffe8ffffffffffUL,
+
+		kVMRangeIOMapBase   = 0xffffe90000000000UL,
+		kVMRangeIOMapEnd    = 0xffffe9ffffffffffUL,
+
+		kVMRangeKernelBase  = KERNEL_VMA,
+	};
+};
+};
 
 #endif

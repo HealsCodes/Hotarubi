@@ -22,7 +22,7 @@
 /* physical memory manager - bitmaping and other tests */
 
 #include "gtest/gtest.h"
-#include "../physical_memory.cc"
+#include "../physmm.cc"
 
 namespace log
 {

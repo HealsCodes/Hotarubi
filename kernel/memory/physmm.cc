@@ -23,8 +23,8 @@
 #include <stddef.h>
 #include <string.h>
 
-#include <hotarubi/memory.h>
-#include <hotarubi/vmconst.h>
+#include <hotarubi/memory/physmm.h>
+#include <hotarubi/memory/const.h>
 
 #include <hotarubi/lock.h>
 #include <hotarubi/log/log.h>

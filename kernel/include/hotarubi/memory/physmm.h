@@ -19,42 +19,27 @@
 
 *******************************************************************************/
 
-/* basic virtual memory layout definitions */
+#ifndef __MEMORY_PHYSMM_H
+#define __MEMORY_PHYSMM_H 1
 
-#ifndef __VMCONST_H
-#define __VMCONST_H 1
-
-#include <hotarubi/boot/bootmem.h>
-
-#define PAGE_SIZE 0x1000
+#include <hotarubi/boot/multiboot.h>
 
 namespace memory
 {
-namespace virtmm
+namespace physmm
 {
+	void init( const multiboot_info_t *boot_info );
 
-	enum VirtualMemoryRangeSet
-	{
-		kVMRangeUserBase    = 0x0000000000000000ULL,
-		kVMRangeUserEnd     = 0x00007fffffffffffULL,
+	void set_physical_base_offset( const uint64_t offset );
+	uint64_t physical_base_offset( void );
 
-		kVMRangeGuard1Base  = 0xffff800000000000UL,
-		kVMRangeGuard1End   = 0xffff80ffffffffffUL,
+	uint32_t free_page_count( void );
 
-		kVMRangePhysMemBase = 0xffff880000000000UL,
-		kVMRangePhysMemEnd  = 0xffffc7ffffffffffUL,
+	void *alloc_page( void );
+	void *alloc_page_range( unsigned count );
 
-		kVMRangeGuard2Base  = 0xffffc80000000000UL,
-		kVMRangeGuard2End   = 0xffffc8ffffffffffUL,
-
-		kVMRangeHeapBase    = 0xffffc90000000000UL,
-		kVMRangeHeapEnd     = 0xffffe8ffffffffffUL,
-
-		kVMRangeIOMapBase   = 0xffffe90000000000UL,
-		kVMRangeIOMapEnd    = 0xffffe9ffffffffffUL,
-
-		kVMRangeKernelBase  = KERNEL_VMA,
-	};
+	void free_page( const void *page );
+	void free_page_range( const void *page, unsigned count );
 };
 };
 

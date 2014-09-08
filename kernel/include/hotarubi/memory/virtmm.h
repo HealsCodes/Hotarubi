@@ -19,12 +19,33 @@
 
 *******************************************************************************/
 
-#ifndef __MEMORY_H
-#define __MEMORY_H 1
+#ifndef __MEMORY_VIRTMM_H
+#define __MEMORY_VIRTMM_H 1
 
-#include <hotarubi/memory/physmm.h>
-#include <hotarubi/memory/virtmm.h>
-#include <hotarubi/memory/cache.h>
-#include <hotarubi/memory/const.h>
+#include <bitmask.h>
+
+namespace memory
+{
+namespace virtmm
+{
+	enum PageFlagSystemSet
+	{
+		kPageFlagNone         = 0,
+		kPageFlagPresent      = 1 << 0,
+		kPageFlagWritable     = 1 << 1,
+		kPageFlagUser         = 1 << 2,
+		kPageFlagWriteThrough = 1 << 3,
+		kPageFlagCacheDisable = 1 << 4,
+		kPageFlagAccessed     = 1 << 5,
+		kPageFlagDirty        = 1 << 6,
+		kPageFlagSizeExtend   = 1 << 7,
+		kPageFlagGlobal       = 1 << 8,
+		kPageFlagNoExecute    = 0x8000000000000000,
+	};
+	BITMASK( PageFlagSystemSet );
+
+	void init( void );
+};
+};
 
 #endif
