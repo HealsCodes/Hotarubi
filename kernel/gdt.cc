@@ -21,89 +21,15 @@
 
 /* Global Descriptor Table manipulation */
 
-#include <stdint.h>
 #include <string.h>
-#include <bitmask.h>
+#include <hotarubi/gdt.h>
+#include <hotarubi/processor.h>
 
 namespace gdt
 {
-
-enum GDTTypeSet
-{
-	kGDTTypeNull            = 0,
-
-	kGDTAccessSys           = 0,
-	kGDTAccessUsr           = 0x60,
-	kGDTPresent             = 0x80,
-
-	kGDTTypeXO              = 0x18,
-	kGDTTypeXR              = 0x1a,
-
-	kGDTTypeRO              = 0x10,
-	kGDTTypeRW              = 0x12,
-	kGDTTypeStackRO         = 0x14,
-	kGDTTypeStackRW         = 0x16,
-
-	kGDTTypeTSS             = 0x09,
-	kGDTTypeCallGate        = 0x0c
-};
-BITMASK( GDTTypeSet );
-
-enum GDTSizeFlagsSet
-{
-	kGDTFlagsNone          = 0x00,
-
-	kGDTGranularityByte    = 0x00,
-	kGDTGranularity4KByte  = 0x08,
-
-	kGDTOpData32Bit        = 0x00,
-	kGDTOpData64Bit        = 0x04,
-	kGDTOpSize32Bit        = 0x00,
-	kGDTOpSize64Bit        = 0x02,
-};
-BITMASK( GDTSizeFlagsSet )
-
-#pragma pack( push, 1 )
-
-/* basic descriptor used in 32- and 64bit modes */
-struct gdt_descriptor
-{
-	uint16_t limit_lo;
-	uint16_t base_lo;
-	uint8_t  base_mi;
-	uint8_t  type;
-	uint8_t  limit_hi : 4;
-	uint8_t  granular : 4;
-	uint8_t  base_hi;
-};
-
-/* extended descriptor used for 64bit TSS */
-struct gdt_descriptor_extended
-{
-	uint16_t limit_lo;
-	uint16_t base_lo;
-	uint8_t  base_mi;
-	uint8_t  type;
-	uint8_t  limit_hi : 4;
-	uint8_t  granular : 4;
-	uint8_t  base_hi;
-	uint32_t base_xt;
-	uint32_t reserved_0;
-};
-
-struct gdt_pointer
-{
-	uint16_t limit;
-	uint64_t address;
-};
-
-#pragma pack( pop )
-
-static struct gdt_descriptor [[aligned(8)]] gdt[5];
-static struct gdt_pointer [[aligned(4)]] gdtr;
-
 static void
-_setup_descriptor( unsigned index, uintptr_t base, uint32_t limit,
+_setup_descriptor( struct gdt_descriptor *gdt,
+                   unsigned index, uintptr_t base, uint32_t limit,
                    GDTTypeSet type, GDTSizeFlagsSet flags )
 {
 	/* FIXME: check index for gdt bounds */
@@ -125,23 +51,26 @@ _setup_descriptor( unsigned index, uintptr_t base, uint32_t limit,
 void
 init( void )
 {
-	memset( gdt, 0, sizeof( gdt ) );
+	struct gdt_descriptor *gdt = processor::local_data()->gdt;
+	struct gdt_pointer   *gdtr = &processor::local_data()->gdtr;
+
+	memset( gdt, 0, sizeof( struct gdt_descriptor ) * GDT_DESCRIPTOR_COUNT );
 
 	GDTSizeFlagsSet flags = kGDTOpSize64Bit | kGDTOpData32Bit | kGDTGranularity4KByte;
 
-	_setup_descriptor( 0, 0, 0, kGDTTypeNull, kGDTFlagsNone );
-	_setup_descriptor( 1, 0, 0xffffffff, kGDTTypeXR | kGDTPresent, flags );
-	_setup_descriptor( 2, 0, 0xffffffff, kGDTTypeRW | kGDTPresent, flags );
-	_setup_descriptor( 3, 0, 0xffffffff, kGDTTypeXR | kGDTAccessUsr | kGDTPresent, flags );
-	_setup_descriptor( 4, 0, 0xffffffff, kGDTTypeRW | kGDTAccessUsr | kGDTPresent, flags );
+	_setup_descriptor( gdt, 0, 0, 0, kGDTTypeNull, kGDTFlagsNone );
+	_setup_descriptor( gdt, 1, 0, 0xffffffff, kGDTTypeXR | kGDTPresent, flags );
+	_setup_descriptor( gdt, 2, 0, 0xffffffff, kGDTTypeRW | kGDTPresent, flags );
+	_setup_descriptor( gdt, 3, 0, 0xffffffff, kGDTTypeXR | kGDTAccessUsr | kGDTPresent, flags );
+	_setup_descriptor( gdt, 4, 0, 0xffffffff, kGDTTypeRW | kGDTAccessUsr | kGDTPresent, flags );
 
-	memset( &gdtr, 0, sizeof( gdtr ) );
+	memset( gdtr, 0, sizeof( struct gdt_pointer ) );
 
-	gdtr.limit   = sizeof( gdt ) - 1;
-	gdtr.address = ( uintptr_t )gdt;
+	gdtr->limit   = sizeof( struct gdt_descriptor ) * GDT_DESCRIPTOR_COUNT - 1;
+	gdtr->address = ( uintptr_t )gdt;
 
 	/* reload the GDT */
-	__asm__ __volatile__( "lgdt (%0)" :: "r"( &gdtr ) );
+	__asm__ __volatile__( "lgdt (%0)" :: "r"( gdtr ) );
 	
 	/* update data segments */
 	__asm__ __volatile__( 

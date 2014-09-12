@@ -25,9 +25,16 @@
 #define __PROCESSOR_H 1
 
 #include <stdint.h>
+#include <hotarubi/gdt.h>
 
 namespace processor
 {
+	struct local_data
+	{
+		struct gdt::gdt_pointer    [[aligned(8)]] gdtr;
+		struct gdt::gdt_descriptor [[aligned(4)]] gdt[GDT_DESCRIPTOR_COUNT];
+	};
+
 	inline uint64_t read_flags( void )
 	{
 		uint64_t r;
@@ -57,6 +64,27 @@ namespace processor
 	{
 		__asm__ __volatile__( "sti" );
 	};
+
+	/* The next method abuses the SYSENTER_CS MSR.
+	 * In legacy mode it's used to determine the CS selector for syscalls,
+	 * however in longmode SYSENTER is illegal so it should be save to use
+	 * this MSR as a per-cpu permanent (16bit) store */
+
+	inline uint8_t processor_nr( void )
+	{
+		uint32_t tmp;
+		__asm__ __volatile__( "rdmsr" : "=a"( tmp ) : "c"( 0x174 ) : "%rdx" );
+		return tmp & 0xff;
+	};
+
+	inline bool is_bsp( void )
+	{
+		return processor_nr() == 0;
+	};
+
+	struct local_data* local_data( void );
+
+	void init( void );
 
 namespace regs
 {

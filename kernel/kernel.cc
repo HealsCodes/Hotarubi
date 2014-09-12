@@ -26,25 +26,36 @@
 #include <hotarubi/log/log.h>
 #include <hotarubi/memory.h>
 #include <hotarubi/gdt.h>
+#include <hotarubi/processor.h>
 
 extern "C" void _init( void );
 
 extern "C" void
 kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
 {
-	_init();
+	if( processor::is_bsp() )
+	{
+		_init();
 
-	log::init_printk();
-	log::register_debug_output();
+		log::init_printk();
+		log::register_debug_output();
 
-	log::printk( "-- reached %s --\n", __FUNCTION__ );
-	log::printk( "loader magic: %#08x\n", loader_magic );
-	log::printk( "loader data : %p\n", multiboot_info );
+		log::printk( "-- reached %s --\n", __FUNCTION__ );
+		log::printk( "loader magic: %#08x\n", loader_magic );
+		log::printk( "loader data : %p\n", multiboot_info );
+	}
 
-	gdt::init();
-	memory::physmm::init( multiboot_info );
-	memory::virtmm::init();
-	memory::cache::init();
+	processor::init();
 
+	if( processor::is_bsp() )
+	{
+		memory::physmm::init( multiboot_info );
+		memory::virtmm::init();
+		memory::cache::init();
+	}
+	else
+	{
+		// TODO: add AP specific initialization calls
+	}
 	__UNDER_CONSTRUCTION__;
 }

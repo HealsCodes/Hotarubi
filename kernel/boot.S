@@ -82,6 +82,13 @@ L_flush_gdt_32:
 	cmp dword ptr[_BSP], 1
 	jne L_enable_paging
 
+L_mark_BSP:
+	/* this is only exectude for the BSP - so use it to store the processor nr */
+	mov ecx, 0x174
+	mov edx, 0
+	mov eax, 0
+	wrmsr
+
 L_setup_paging:
 	lea edi, BOOT_PML4
 	lea ecx, BOOT_PDPT_2
