@@ -21,16 +21,19 @@
 
 /* methods dealing directly with the CPU or per-CPU local data */
 
-#ifndef __PROCESSOR_H
-#define __PROCESSOR_H 1
+#ifndef __PROCESSOR_LOCAL_DATA_H
+#define __PROCESSOR_LOCAL_DATA_H 1
 
-#include <hotarubi/processor/core.h>
-#include <hotarubi/processor/regs.h>
-#include <hotarubi/processor/local_data.h>
+#include <stdint.h>
+#include <hotarubi/gdt.h>
 
 namespace processor
 {
-	void init( void );
+	struct local_data
+	{
+		struct gdt::gdt_pointer    [[aligned(8)]] gdtr;
+		struct gdt::gdt_descriptor [[aligned(4)]] gdt[GDT_DESCRIPTOR_COUNT];
+	};
 };
 
 #endif
