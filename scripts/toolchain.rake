@@ -28,6 +28,20 @@ TC = {
 }
 TC.merge!( YAML::load_file( 'toolchain.yml' ) ) if File.exists?( 'toolchain.yml' )
 
+class LocalDataContainer
+  attr_accessor :includes, :defines
+
+  def initialize
+    @includes = []
+    @defines = []
+  end
+
+  def get_binding
+    binding()
+  end
+end
+
+$local_data = LocalDataContainer.new
 $silent  = ""
 
 def _show_progress
@@ -256,9 +270,24 @@ end
 
 [ '.c', '.cc', '.S' ].each do |source_ext|
   rule '.d' => [ source_ext ] do |t|
+    # check if this file declares local data
+    force_local = false
+    File.open( t.source ).grep( /^\s*LOCAL_DATA\s*\(\s*.+\s*\)\s*;/ ).each do |data_def|
+      case data_def
+        when /LOCAL_DATA\s*\(\s*([^;]+)\s*;\s*([A-Za-z0-9_.\/]+)\s*\)/
+          $local_data.includes << $2 unless $local_data.includes.include? $2
+          $local_data.defines << $1
+
+        when /LOCAL_DATA\s*\(\s*([^;]+)\s*\)/
+          $local_data.defines << $1
+      end
+      force_local = true
+    end
+    Rake::Task['local_data'].execute( :force => force_local )
+
     include_path = "-I #{File.dirname( t.source )} #{TC_FLAGS[ :INCLUDE ].flatten.join( ' ' )}"
 
-    File.open( t.name, "w") do |depfile|
+    File.open( t.name, 'w') do |depfile|
       depfile.write( `#{TC[ :cxx ]} #{include_path} -MM #{t.source}`.gsub( /^(.*\.o:)/, t.source.ext( '.o:' ) ) )
     end
   end

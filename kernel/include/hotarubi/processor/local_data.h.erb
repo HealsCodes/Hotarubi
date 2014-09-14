@@ -19,20 +19,27 @@
 
 *******************************************************************************/
 
-/* methods dealing directly with the CPU or per-CPU local data */
+/* methods dealing directly with the CPU or per-CPU local data 
+ *
+ * THIS FILE IS RECREATED FROM local_data.h.erb as needed - DON'T MODIFY
+ */
 
 #ifndef __PROCESSOR_LOCAL_DATA_H
 #define __PROCESSOR_LOCAL_DATA_H 1
 
 #include <stdint.h>
-#include <hotarubi/gdt.h>
+<% for @header in @includes %>
+<%= "#include <#{@header}>" %>
+<% end %>
+
 
 namespace processor
 {
 	struct local_data
 	{
-		struct gdt::gdt_pointer    [[aligned(8)]] gdtr;
-		struct gdt::gdt_descriptor [[aligned(4)]] gdt[GDT_DESCRIPTOR_COUNT];
+<% for @member in @defines %>
+		<%= "#{@member};" %>
+<% end %>
 	};
 };
 

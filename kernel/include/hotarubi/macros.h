@@ -38,4 +38,6 @@
 # define _BUILTIN(x) builtin_ ##x
 #endif
 
+#define LOCAL_DATA(x)
+
 #endif

@@ -1,5 +1,7 @@
+require 'erb'
 require 'yaml'
 require 'rake/clean'
+require 'rake/task_arguments'
 require 'rake/loaders/makefile'
 
 Dir.glob( './scripts/**/*.rake' ).each { |rake_ext| import rake_ext }
@@ -11,6 +13,22 @@ desc "Build hotarubi.elf"
 task :kernel => 'hotarubi.elf' do
   puts "Ready."
 end
+
+task :local_data, [:force] do |t, args|
+  template = 'kernel/include/hotarubi/processor/local_data.h.erb'
+  target   = template.sub( '.erb', '' )
+
+  if args[:force] == true or !File.exists? target
+    #puts "GEN      #{template.sub( '.erb', '' )}"
+
+    render = ERB.new( File.read( template ), 0, '<>' )
+    File.open( target, 'w' ) do |io|
+      io.write( render.result( $local_data.get_binding ) )
+    end
+  end
+end
+
+file 'kernel/include/hotarubi/processor/local_data.h' => :local_data
 
 # collect sources and options files
 SOURCES    = FileList.new( 'kernel/**/*.c', 'kernel/**/*.cc', 'kernel/**/*.S' )

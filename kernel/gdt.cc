@@ -24,6 +24,10 @@
 #include <string.h>
 #include <hotarubi/gdt.h>
 #include <hotarubi/processor.h>
+#include <hotarubi/macros.h>
+
+LOCAL_DATA( struct gdt::gdt_pointer    gdtr; hotarubi/gdt.h );
+LOCAL_DATA( struct gdt::gdt_descriptor gdt[GDT_DESCRIPTOR_COUNT] );
 
 namespace gdt
 {
