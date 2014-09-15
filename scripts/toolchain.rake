@@ -28,37 +28,6 @@ TC = {
 }
 TC.merge!( YAML::load_file( 'toolchain.yml' ) ) if File.exists?( 'toolchain.yml' )
 
-# A helper class used by the ERB templates further down.
-# ConditionalTemplate provides support to add members at runtime
-# and will only ever rewrite the target file if it's missing or would change.
-class ConditionalTemplate
-  include ERB::Util
-
-  def define_attrs( attrs )
-    attrs.each do |var, value|
-      ( class << self; self; end ).class_eval { attr_accessor var }
-      instance_variable_set "@#{var}", value
-    end
-  end
-
-  def render( source )
-    ERB.new( File.read( source ), 0, '<>' ).result( binding )
-  end
-
-  def generate( target, source )
-    data  = render( source )
-
-    if File.exists? target
-      if data == File.read( target )
-        return false
-      end
-    end
-
-    File.open( target, 'w' ) { |io| io.write( data ) }
-    true
-  end
-end
-
 $silent  = ""
 
 def _show_progress
@@ -293,29 +262,6 @@ end
       depfile.write( `#{TC[ :cxx ]} #{include_path} -MM #{t.source}`.gsub( /^(.*\.o:)/, t.source.ext( '.o:' ) ) )
     end
   end
-end
-
-rule '.h' => '.h.erb' do |t|
-  CLEAN.include( t.name )
-  template = ConditionalTemplate.new
-
-  case File.basename( t.name )
-    when 'local_data.h'
-      template.define_attrs( :includes => [], :defines => [] )
-
-      SOURCES.each do |src|
-        File.open( src ).grep( /^\s*LOCAL_DATA_(INC|DEF)\s*\(\s*.+\s*\)\s*;/ ).each do |match|
-          case match
-            when /LOCAL_DATA_INC\s*\(\s*([\w. \/-]+[\w.-]+)\s*\)/
-              template.includes << $1 unless template.includes.include? $1.strip!
-
-            when /LOCAL_DATA_DEF\s*\(\s*([^;]+)\s*\)/
-              template.defines << $1.strip
-          end
-        end
-      end
-  end
-  puts "ERB      #{t.name}" if template.generate( t.name, t.source )
 end
 
 # Rake helper functions
