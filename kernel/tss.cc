@@ -28,6 +28,7 @@
 #include <hotarubi/processor/core.h>
 #include <hotarubi/processor/local_data.h>
 #include <hotarubi/memory/physmm.h>
+#include <hotarubi/memory/const.h>
 
 LOCAL_DATA_INC( hotarubi/tss.h );
 LOCAL_DATA_DEF( struct tss::tss *tss );
@@ -51,9 +52,12 @@ init( void )
 	}
 
 	memset( tss, 0, sizeof( struct tss ) );
-	tss->rsp0   = ( uint64_t )memory::physmm::alloc_page();
-	tss->ist[0] = ( uint64_t )memory::physmm::alloc_page();
-	tss->ist[1] = ( uint64_t )memory::physmm::alloc_page();
+	tss->rsp0   = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
+	tss->rsp2   = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
+	tss->ist[0] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
+	tss->ist[1] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
+	tss->ist[2] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
+	tss->ist[3] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
 
 	/* FIXME: verify those allocations! */
 	processor::local_data()->tss = tss;
