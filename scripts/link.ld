@@ -40,6 +40,7 @@ SECTIONS {
 		KEEP (*(SORT(.dtors.*)))
 
 		*(.text* .gnu.linkonce.t*)
+		*(.text.* )
 		*(.rodata* .gnu.linkonce.r*)
 
 		__etext = .;
@@ -63,7 +64,7 @@ SECTIONS {
 		*(EXCLUDE_FILE(kernel/boot.o) .bss)
 
 		*(.bss* .gnu.linkonce.b*)
-		*(.COMMON*)
+		*(COMMON*)
 
 		__ebss = .;
 		__bootpages = .;
@@ -85,6 +86,7 @@ SECTIONS {
 	/DISCARD/ : {
 		*(.note*)
 		*(.comment)
+		*(.group*)
 		*(.eh_frame*)
 		*(.jcr*)
 		*(.gnu_debuglink)
