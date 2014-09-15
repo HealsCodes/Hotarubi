@@ -29,9 +29,8 @@
 
 #include <stdint.h>
 <% for @header in @includes %>
-<%= "#include <#{@header}>" %>
+<%= "#include <#{@header}>\n" %>
 <% end %>
-
 
 namespace processor
 {
