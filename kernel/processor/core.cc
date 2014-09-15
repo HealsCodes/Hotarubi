@@ -85,6 +85,7 @@ init ( void )
 	regs::write_msr( IA32_GS_BASE      , ( uintptr_t )local );
 	regs::write_msr( IA32_KERNEL_GSBASE, ( uintptr_t )local );
 
+	tss::init();
 	gdt::init();
 };
 

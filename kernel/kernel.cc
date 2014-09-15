@@ -44,11 +44,11 @@ kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
 	log::printk( "loader magic: %#08x\n", loader_magic );
 	log::printk( "loader data : %p\n", multiboot_info );
 
-	processor::init();
-
 	memory::physmm::init( multiboot_info );
 	memory::virtmm::init();
 	memory::cache::init();
+
+	processor::init();
 
 	__UNDER_CONSTRUCTION__;
 }
