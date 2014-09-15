@@ -25,7 +25,6 @@
 #include <hotarubi/boot/multiboot.h>
 #include <hotarubi/log/log.h>
 #include <hotarubi/memory.h>
-#include <hotarubi/gdt.h>
 #include <hotarubi/processor.h>
 #include <hotarubi/release.h>
 
@@ -49,7 +48,6 @@ kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
 	memory::cache::init();
 
 	processor::init();
-
 	__UNDER_CONSTRUCTION__;
 }
 

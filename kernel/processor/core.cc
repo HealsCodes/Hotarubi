@@ -87,6 +87,7 @@ init ( void )
 
 	tss::init();
 	gdt::init();
+	idt::init();
 };
 
 };
