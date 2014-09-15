@@ -71,7 +71,7 @@ _setup_extended_descriptor( struct gdt_descriptor *gdt,
 
 	descr->base_lo  = ( base >>  0 ) & 0xffff;
 	descr->base_mi  = ( base >> 16 ) & 0xff;
-	descr->base_hi  = ( base >> 20 ) & 0xff;
+	descr->base_hi  = ( base >> 24 ) & 0xff;
 	descr->base_xt  = ( base >> 32 ) & 0xffffffff;
 
 	descr->type     = ( uint8_t )type;
