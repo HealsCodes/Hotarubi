@@ -80,6 +80,16 @@ rule '.h' => '.h.erb' do |t|
           end
         end
       end
+
+    when 'release.h'
+      template.define_attrs(
+        :release       => RELEASE_NAME,
+        :release_major => RELEASE_MAJOR,
+        :release_minor => RELEASE_MINOR,
+        :release_micro => RELEASE_MICRO,
+        :git_revision  => "(git:#{`git log -1 --pretty=format:%h`.chomp})",
+        :builder_tag   => "#{DateTime.now.to_s} - #{ENV['USER']}@#{`hostname`.chomp}"
+      )
   end
   puts "ERB      #{t.name}" if template.generate( t.name, t.source )
 end

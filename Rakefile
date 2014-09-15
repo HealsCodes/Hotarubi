@@ -3,6 +3,11 @@ require 'yaml'
 require 'rake/clean'
 require 'rake/loaders/makefile'
 
+RELEASE_NAME  = ''
+RELEASE_MAJOR = 0
+RELEASE_MINOR = 1
+RELEASE_MICRO = 0
+
 Dir.glob( './scripts/**/*.rake' ).each { |rake_ext| import rake_ext }
 
 # rake defaults
@@ -47,7 +52,7 @@ SOURCES_32.each do |src|
 end
 
 GENERATED.each do |t|
-  file t => "#{t}.erb"
+  file t => [ "#{t}.erb", 'Rakefile' ]
 end
 
 unless Rake.application.top_level_tasks.join( ' ' ) =~ /^(toolchain[:\/].*|travis:prepare|clean)/

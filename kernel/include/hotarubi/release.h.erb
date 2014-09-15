@@ -19,28 +19,17 @@
 
 *******************************************************************************/
 
-/* methods dealing directly with the CPU or per-CPU local data 
- *
+/* 
  * THIS FILE IS RECREATED FROM <%= @source %> as needed - DON'T MODIFY
  */
 
-#ifndef __PROCESSOR_LOCAL_DATA_H
-#define __PROCESSOR_LOCAL_DATA_H 1
+#ifndef _RELEASE_H
+#define _RELEASE_H 1
 
-#include <stdint.h>
-<% for @header in @includes %>
-<%= "#include <#{@header}>" %>
-<% end %>
+#define RELEASE_STRING  "Hotarubi <%= "#{@release_major}.#{@release_minor}.#{@release_micro}" %> '<%= @release %>' <%= @git_revision %> # <%= @builder_tag %>"
 
-
-namespace processor
-{
-	struct local_data
-	{
-<% for @member in @defines %>
-		<%= "#{@member};" %>
-<% end %>
-	};
-};
+#define RELEASE_MAJOR   <%= @release_major %>
+#define RELEASE_MINOR   <%= @release_minor %>
+#define RELEASE_MICRO   <%= @release_micro %>
 
 #endif

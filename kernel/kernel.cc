@@ -27,6 +27,7 @@
 #include <hotarubi/memory.h>
 #include <hotarubi/gdt.h>
 #include <hotarubi/processor.h>
+#include <hotarubi/release.h>
 
 extern "C" void _init( void );
 
@@ -40,6 +41,7 @@ kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
 		log::init_printk();
 		log::register_debug_output();
 
+		log::printk( "%s\n", RELEASE_STRING );
 		log::printk( "-- reached %s --\n", __FUNCTION__ );
 		log::printk( "loader magic: %#08x\n", loader_magic );
 		log::printk( "loader data : %p\n", multiboot_info );
