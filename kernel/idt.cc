@@ -25,7 +25,7 @@
 #include <string.h>
 #include <bitmask.h>
 
-#include <Hotarubi/log/log.h>
+#include <hotarubi/log/log.h>
 
 #define IDT_DESCRIPTORS 49
 

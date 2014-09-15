@@ -30,6 +30,10 @@
 #include <hotarubi/lock.h>
 #include <hotarubi/log/log.h>
 
+#include <hotarubi/gdt.h>
+#include <hotarubi/idt.h>
+#include <hotarubi/tss.h>
+
 namespace processor
 {
 #define IA32_APCI_BASE     0x1b
