@@ -28,20 +28,37 @@ TC = {
 }
 TC.merge!( YAML::load_file( 'toolchain.yml' ) ) if File.exists?( 'toolchain.yml' )
 
-class LocalDataContainer
-  attr_accessor :includes, :defines
+# A helper class used by the ERB templates further down.
+# ConditionalTemplate provides support to add members at runtime
+# and will only ever rewrite the target file if it's missing or would change.
+class ConditionalTemplate
+  include ERB::Util
 
-  def initialize
-    @includes = []
-    @defines = []
+  def define_attrs( attrs )
+    attrs.each do |var, value|
+      ( class << self; self; end ).class_eval { attr_accessor var }
+      instance_variable_set "@#{var}", value
+    end
   end
 
-  def get_binding
-    binding()
+  def render( source )
+    ERB.new( File.read( source ), 0, '<>' ).result( binding )
+  end
+
+  def generate( target, source )
+    data  = render( source )
+
+    if File.exists? target
+      if data == File.read( target )
+        return false
+      end
+    end
+
+    File.open( target, 'w' ) { |io| io.write( data ) }
+    true
   end
 end
 
-$local_data = LocalDataContainer.new
 $silent  = ""
 
 def _show_progress
@@ -270,27 +287,35 @@ end
 
 [ '.c', '.cc', '.S' ].each do |source_ext|
   rule '.d' => [ source_ext ] do |t|
-    # check if this file declares local data
-    force_local = false
-    File.open( t.source ).grep( /^\s*LOCAL_DATA\s*\(\s*.+\s*\)\s*;/ ).each do |data_def|
-      case data_def
-        when /LOCAL_DATA\s*\(\s*([^;]+)\s*;\s*([A-Za-z0-9_.\/]+)\s*\)/
-          $local_data.includes << $2 unless $local_data.includes.include? $2
-          $local_data.defines << $1
-
-        when /LOCAL_DATA\s*\(\s*([^;]+)\s*\)/
-          $local_data.defines << $1
-      end
-      force_local = true
-    end
-    Rake::Task['local_data'].execute( :force => force_local )
-
     include_path = "-I #{File.dirname( t.source )} #{TC_FLAGS[ :INCLUDE ].flatten.join( ' ' )}"
 
     File.open( t.name, 'w') do |depfile|
       depfile.write( `#{TC[ :cxx ]} #{include_path} -MM #{t.source}`.gsub( /^(.*\.o:)/, t.source.ext( '.o:' ) ) )
     end
   end
+end
+
+rule '.h' => '.h.erb' do |t|
+  CLEAN.include( t.name )
+  template = ConditionalTemplate.new
+
+  case File.basename( t.name )
+    when 'local_data.h'
+      template.define_attrs( :includes => [], :defines => [] )
+
+      SOURCES.each do |src|
+        File.open( src ).grep( /^\s*LOCAL_DATA_(INC|DEF)\s*\(\s*.+\s*\)\s*;/ ).each do |match|
+          case match
+            when /LOCAL_DATA_INC\s*\(\s*([\w. \/-]+[\w.-]+)\s*\)/
+              template.includes << $1 unless template.includes.include? $1.strip!
+
+            when /LOCAL_DATA_DEF\s*\(\s*([^;]+)\s*\)/
+              template.defines << $1.strip
+          end
+        end
+      end
+  end
+  puts "ERB      #{t.name}" if template.generate( t.name, t.source )
 end
 
 # Rake helper functions
