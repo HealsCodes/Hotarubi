@@ -23,19 +23,23 @@
 
 #include <string.h>
 
-#include <hotarubi/processor.h>
+#include <hotarubi/processor/core.h>
+#include <hotarubi/processor/regs.h>
+#include <hotarubi/processor/local_data.h>
+
 #include <hotarubi/lock.h>
 #include <hotarubi/log/log.h>
 
 namespace processor
 {
-#define MAX_PROCESSOR_COUNT 255
-#define IA32_APCI_BASE 0x1b
+#define IA32_APCI_BASE     0x1b
+#define IA32_GS_BASE       0xc0000101
+#define IA32_KERNEL_GSBASE 0xc0000102
+
+LOCAL_DATA_DEF( uint8_t id );
 
 static SpinLock processor_accounting_lock;
 static unsigned processor_active_count = 0;
-/* FIXME: this should be dynamically resized instead of being statically allocated */
-static struct local_data *processor_local_data[MAX_PROCESSOR_COUNT];
 
 /* local static allocation for the bootstrap processor */
 static struct local_data _bsp_local_data;
@@ -50,38 +54,36 @@ _cpuid( uint32_t eax, uint32_t ecx, uint32_t res[] )
 	);
 }
 
-/* while processor_nr() is public I don't think it would be wise to allow
- * others to mess with the data (.. at least not in a simple way) */
-static inline void
-_store_processor_nr( uint8_t nr )
+bool is_bsp( void )
 {
-	__asm__ __volatile__( "wrmsr" :: "c"( 0x174 ), "d"( 0 ), "a"( nr ) );
-};
-
-struct local_data*
-local_data( void )
-{
-	/* FIXME: assert( processor_nr() < MAX_PROCESSOR_COUNT ); */
-	/* FIXME: assert( processor_local_data[x] != nullptr ); */
-	return processor_local_data[processor_nr()];
+	return local_data()->id == 0;
 }
 
 void
 init ( void )
 {
+	struct local_data *local = nullptr;
+
 	processor_accounting_lock.lock();
-	_store_processor_nr( processor_active_count++ );
+
+	if( processor_active_count == 0 )
+	{
+		/* BSP */
+		local = &_bsp_local_data;
+	}
+	else
+	{
+		/* AP - allocate from cache */
+	}
+	memset( local, 0, sizeof( struct local_data ) );
+
+	local->_gs_self = ( uintptr_t )local;
+	local->id       = processor_active_count++;
+
 	processor_accounting_lock.unlock();
 
-	if( is_bsp() )
-	{
-		/* no need to hold the accounting_lock - if this is the BSP no other
-		 * processors are active at this point */
-		memset( processor_local_data, 0, sizeof( processor_local_data ) );
-		memset( &_bsp_local_data, 0, sizeof( _bsp_local_data ) );
-
-		processor_local_data[0] = &_bsp_local_data;
-	}
+	regs::write_msr( IA32_GS_BASE      , ( uintptr_t )local );
+	regs::write_msr( IA32_KERNEL_GSBASE, ( uintptr_t )local );
 
 	gdt::init();
 };

@@ -37,10 +37,15 @@ namespace processor
 {
 	struct local_data
 	{
+		/* _gs_self is used to get a pointer to this struct by accessing %gs:0 */
+		uintptr_t _gs_self;
+
 <% for @member in @defines %>
 		<%= "#{@member};" %>
 <% end %>
 	};
+	static_assert( offsetof( struct local_data, _gs_self ) == 0,
+	               "_gs_self must be located at offset 0 in struct local_data.");
 };
 
 #endif

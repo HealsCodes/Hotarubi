@@ -58,24 +58,14 @@ namespace processor
 		__asm__ __volatile__( "sti" );
 	};
 
-	/* The next method abuses the SYSENTER_CS MSR.
-	 * In legacy mode it's used to determine the CS selector for syscalls,
-	 * however in longmode SYSENTER is illegal so it should be save to use
-	 * this MSR as a per-cpu permanent (16bit) store */
-
-	inline uint8_t processor_nr( void )
+	inline struct local_data* local_data( void )
 	{
-		uint32_t tmp;
-		__asm__ __volatile__( "rdmsr" : "=a"( tmp ) : "c"( 0x174 ) : "%rdx" );
-		return tmp & 0xff;
-	};
+		struct local_data *data = nullptr;
+		__asm__ __volatile__( "mov %%gs:0(,1), %0" : "=r"( data ) );
+		return data;
+	}
 
-	inline bool is_bsp( void )
-	{
-		return processor_nr() == 0;
-	};
-
-	struct local_data* local_data( void );
+	bool is_bsp( void );
 };
 
 #endif

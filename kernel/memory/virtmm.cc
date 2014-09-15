@@ -184,6 +184,12 @@ error_out:
 }
 
 void
+init_ap( void )
+{
+	processor::regs::write_cr3( ( uintptr_t )system_pml4 );
+}
+
+void
 init( void )
 {
 	_create_system_vm();

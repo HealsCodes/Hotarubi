@@ -41,7 +41,8 @@ multiboot:
 /******************************************************************************/
 .section .text
 /******************************************************************************/
-.extern kernel_entry, __bss, __ebss, BOOT_PML4, BOOT_PDPT_1, BOOT_PDPT_2, BOOT_PDT
+.extern kernel_entry, kernel_ap_entry __bss, __ebss
+.extern BOOT_PML4, BOOT_PDPT_1, BOOT_PDPT_2, BOOT_PDT
 
 .code32
 .globl kickstart
@@ -77,17 +78,11 @@ L_failed_64bit_capable:
 L_flush_gdt_32:
 	mov ax, 0x10
 	mov ds, ax
+	mov gs, ax
 	mov ss, ax
 
 	cmp dword ptr[_BSP], 1
 	jne L_enable_paging
-
-L_mark_BSP:
-	/* this is only exectude for the BSP - so use it to store the processor nr */
-	mov ecx, 0x174
-	mov edx, 0
-	mov eax, 0
-	wrmsr
 
 L_setup_paging:
 	lea edi, BOOT_PML4
@@ -172,9 +167,6 @@ L_long_mode_enabled:
 	cmp dword ptr[_BSP], 1
 	jne L_jump_to_64
 
-	/* BSP passed through here - zero the flag */
-	mov dword ptr[_BSP], 0
-
 	/* memory at KERNEL_VMA is now accessible - clean out BSS */
 L_clear_bss:
 	lea rdi, __bss
@@ -189,7 +181,18 @@ L_jump_to_64:
 	lea rsp, __boot_stack_top 
 	mov edi, dword ptr[_MBD + 0]
 	mov esi, dword ptr[_MBD + 4]
+
+	cmp dword ptr[_BSP], 1
+	jne L_use_ap_entry
+
+	/* BSP passed through here - zero the flag */
+	mov dword ptr[_BSP], 0
+
 	lea rax, kernel_entry
+	jmp rax
+
+L_use_ap_entry:
+	lea rax, kernel_ap_entry
 	jmp rax
 
 1:

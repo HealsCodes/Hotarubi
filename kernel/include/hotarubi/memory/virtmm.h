@@ -44,6 +44,7 @@ namespace virtmm
 	};
 	BITMASK( PageFlagSystemSet );
 
+	void init_ap( void );
 	void init( void );
 };
 };

@@ -34,30 +34,32 @@ extern "C" void _init( void );
 extern "C" void
 kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
 {
-	if( processor::is_bsp() )
-	{
-		_init();
+	_init();
 
-		log::init_printk();
-		log::register_debug_output();
+	log::init_printk();
+	log::register_debug_output();
 
-		log::printk( "%s\n", RELEASE_STRING );
-		log::printk( "-- reached %s --\n", __FUNCTION__ );
-		log::printk( "loader magic: %#08x\n", loader_magic );
-		log::printk( "loader data : %p\n", multiboot_info );
-	}
+	log::printk( "%s\n", RELEASE_STRING );
+	log::printk( "-- reached %s --\n", __FUNCTION__ );
+	log::printk( "loader magic: %#08x\n", loader_magic );
+	log::printk( "loader data : %p\n", multiboot_info );
 
 	processor::init();
 
-	if( processor::is_bsp() )
-	{
-		memory::physmm::init( multiboot_info );
-		memory::virtmm::init();
-		memory::cache::init();
-	}
-	else
-	{
-		// TODO: add AP specific initialization calls
-	}
+	memory::physmm::init( multiboot_info );
+	memory::virtmm::init();
+	memory::cache::init();
+
+	__UNDER_CONSTRUCTION__;
+}
+
+extern "C" void
+kernel_ap_entry( void )
+{
+	/* This is executed by application processors */
+	processor::init();
+
+	memory::virtmm::init_ap();
+
 	__UNDER_CONSTRUCTION__;
 }
