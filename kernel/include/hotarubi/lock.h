@@ -25,7 +25,7 @@
 #define __LOCK_H
 
 #include <stdint.h>
-#include <hotarubi/processor/regs.h>
+#include <hotarubi/processor/core.h>
 
 class SpinLock
 {
