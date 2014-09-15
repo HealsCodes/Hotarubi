@@ -33,7 +33,7 @@ namespace tss
 
 	struct tss
 	{
-		uint64_t _reserved_0;
+		uint32_t _reserved_0;
 		uint64_t rsp0;
 		uint64_t rsp1;
 		uint64_t rsp2;
