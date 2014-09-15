@@ -81,19 +81,19 @@ TEST( list, del )
 	list_add( &test_list, &b.items );
 	list_add( &test_list, &c.items );
 
-	EXPECT_EQ( false, list_empty( &test_list ) );
+	EXPECT_FALSE( list_empty( &test_list ) );
 	EXPECT_EQ( 3, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
 
 	list_del( &c.items );
-	EXPECT_EQ( false, list_empty( &test_list ) );
+	EXPECT_FALSE( list_empty( &test_list ) );
 	EXPECT_EQ( 2, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
 
 	list_del( &b.items );
-	EXPECT_EQ( false, list_empty( &test_list ) );
+	EXPECT_FALSE( list_empty( &test_list ) );
 	EXPECT_EQ( 1, LIST_HEAD_ENTRY( &test_list, struct list_item, items )->id );
 
 	list_del( &a.items );
-	EXPECT_EQ( true, list_empty( &test_list ) );
+	EXPECT_TRUE( list_empty( &test_list ) );
 }
 
 TEST( list, foreach )
@@ -224,19 +224,19 @@ TEST( slist, del )
 	slist_add( &test_slist, &e.items );
 	slist_add( &test_slist, &f.items );
 
-	EXPECT_EQ( false, slist_empty( &test_slist ) );
+	EXPECT_FALSE( slist_empty( &test_slist ) );
 	EXPECT_EQ( 3, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
 
 	slist_del( &test_slist, &f.items );
-	EXPECT_EQ( false, slist_empty( &test_slist ) );
+	EXPECT_FALSE( slist_empty( &test_slist ) );
 	EXPECT_EQ( 2, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
 
 	slist_del( &test_slist, &e.items );
-	EXPECT_EQ( false, slist_empty( &test_slist ) );
+	EXPECT_FALSE( slist_empty( &test_slist ) );
 	EXPECT_EQ( 1, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
 
 	slist_del( &test_slist, &d.items );
-	EXPECT_EQ( true, slist_empty( &test_slist ) );
+	EXPECT_TRUE( slist_empty( &test_slist ) );
 }
 
 TEST( slist, foreach )
