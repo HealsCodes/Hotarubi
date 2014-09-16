@@ -135,7 +135,8 @@ init( void )
 				stack = kIDTStack4;
 				break;
 
-			case 15: /* not used */
+			case 15:        /* not used */
+			case 20 ... 31: /* not used */
 				continue;
 
 			case 32: /* syscall */
