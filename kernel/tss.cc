@@ -53,7 +53,6 @@ init( void )
 
 	memset( tss, 0, sizeof( struct tss ) );
 	tss->rsp0   = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
-	tss->rsp2   = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
 	tss->ist[0] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
 	tss->ist[1] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
 	tss->ist[2] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
