@@ -19,13 +19,23 @@
 
 *******************************************************************************/
 
-#ifndef __MEMORY_H
-#define __MEMORY_H 1
+/* kmalloc / kfree / krealloc */
 
-#include <hotarubi/memory/physmm.h>
-#include <hotarubi/memory/virtmm.h>
-#include <hotarubi/memory/cache.h>
-#include <hotarubi/memory/const.h>
-#include <hotarubi/memory/kmalloc.h>
+#ifndef _MEMORY_KMALLOC_H
+#define _MEMORY_KMALLOC_H 1
+
+#include <stddef.h>
+
+namespace memory
+{
+namespace kmalloc
+{
+	void init( void );
+};
+};
+
+void *kmalloc( size_t n );
+void *krealloc( void *ptr, size_t n );
+void kfree( void *ptr );
 
 #endif
