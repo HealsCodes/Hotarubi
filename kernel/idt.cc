@@ -25,7 +25,9 @@
 #include <string.h>
 #include <bitmask.h>
 
+#include <hotarubi/idt.h>
 #include <hotarubi/log/log.h>
+#include <hotarubi/processor/core.h>
 
 #define IDT_DESCRIPTORS 49
 
@@ -86,6 +88,32 @@ static struct idt_descriptor idt[IDT_DESCRIPTORS];
 static struct idt_pointer    idtr;
 
 static void
+_default_irq_stub( irq_stack_frame_t &stack )
+{
+	log::printk( "\n--- call to default irq stub ---\n"
+	             "- source irq: %ld, error code: %d\n"
+	             "rip: %016lx\n"
+	             "rsp: %016lx rflags: %016lx\n"
+	             "rax: %016lx rbx: %016lx rcx: %016lx\n"
+	             "rdx: %016lx rsi: %016lx rdi: %016lx\n"
+	             "rbp: %016lx r8 : %016lx r9 : %016lx\n"
+	             "r10: %016lx r11: %016lx r12: %016lx\n"
+	             "r13: %016lx r14: %016lx r15: %016lx\n"
+	             "cr2: %016lx\n"
+	             "cs: %04x ds: %04x ss: %04x\n\n",
+	             stack._irq_nr, stack.error_code,
+	             stack.rip, stack.rsp, stack.rflags,
+	             stack.rax, stack.rbx, stack.rcx,
+	             stack.rdx, stack.rsi, stack.rdi,
+	             stack.rbp, stack.r8 , stack.r9 ,
+	             stack.r10, stack.r11, stack.r12,
+	             stack.r13, stack.r14, stack.r15,
+	             stack.cr2, stack.cs, stack.ds, stack.ss );
+
+	do { __asm__ __volatile__( "hlt" ); } while( 1 );
+}
+
+static void
 _setup_idt_descriptor( struct idt_descriptor *idt, unsigned index,
                        uintptr_t target, uint16_t selector,
                        IDTStackSet stack, IDTTypeSet type )
@@ -102,63 +130,87 @@ _setup_idt_descriptor( struct idt_descriptor *idt, unsigned index,
 	descr->ist       = stack;
 }
 
+bool
+register_irq_handler( unsigned index, irq_handler_fn fn )
+{
+	if( index <= IDT_DESCRIPTORS )
+	{
+		if( _interrupt_pointer_table[index] == 0 ||
+			_interrupt_pointer_table[index] == ( uintptr_t )_default_irq_stub )
+		{
+			_interrupt_pointer_table[index] = ( uintptr_t )fn;
+			return true;
+		}
+	}
+	return false;
+}
+
 void
 init( void )
 {
-	uintptr_t stub_size = ( ( uintptr_t )_interrupt_stub_1 ) - ( ( uintptr_t )_interrupt_stub_0 );
-	uintptr_t stub_base = ( ( uintptr_t )_interrupt_stub_0 );
-
-	memset( idt, 0, sizeof( idt ) );
-	for( size_t i = 0; i < IDT_DESCRIPTORS; ++i )
+	if( processor::is_bsp() )
 	{
-		IDTTypeSet  type;
-		IDTStackSet stack;
-		switch( i )
+		uintptr_t stub_size = ( ( uintptr_t )_interrupt_stub_1 ) - ( ( uintptr_t )_interrupt_stub_0 );
+		uintptr_t stub_base = ( ( uintptr_t )_interrupt_stub_0 );
+
+		log::printk( "Initializing interrupt descriptor table with %d entries..\n",
+		             IDT_DESCRIPTORS );
+
+		memset( idt, 0, sizeof( idt ) );
+		for( size_t i = 0; i < IDT_DESCRIPTORS; ++i )
 		{
-			case  1: /* #DB  */
-				type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
-				stack = kIDTStack1;
-				break;
+			register_irq_handler( i, _default_irq_stub );
 
-			case  2: /* #NMI */
-				type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
-				stack = kIDTStack2;
-				break;
+			IDTTypeSet  type;
+			IDTStackSet stack;
+			switch( i )
+			{
+				case  1: /* #DB  */
+					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
+					stack = kIDTStack1;
+					break;
 
-			case  8: /* #DF  */
-				type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
-				stack = kIDTStack3;
-				break;
+				case  2: /* #NMI */
+					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
+					stack = kIDTStack2;
+					break;
 
-			case 18: /* #MC  */
-				type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
-				stack = kIDTStack4;
-				break;
+				case  8: /* #DF  */
+					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
+					stack = kIDTStack3;
+					break;
 
-			case 15:        /* not used */
-			case 20 ... 31: /* not used */
-				continue;
+				case 18: /* #MC  */
+					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
+					stack = kIDTStack4;
+					break;
 
-			case 32: /* syscall */
-				type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessUsr;
-				stack = kIDTStackNone;
-				break;
+				case 15:        /* not used */
+				case 20 ... 31: /* not used */
+					continue;
 
-			default:
-				type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
-				stack = kIDTStackNone;
-				break;
+				case 32: /* syscall */
+					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessUsr;
+					stack = kIDTStackNone;
+					break;
+
+				default:
+					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
+					stack = kIDTStackNone;
+					break;
+			}
+			_setup_idt_descriptor( idt, i, stub_base, 0x08, stack, type );
+			stub_base += stub_size;
 		}
-		_setup_idt_descriptor( idt, i, stub_base, 0x08, stack, type );
-		stub_base += stub_size;
-	}
 
-	memset( &idtr, 0, sizeof( idtr ) );
-	idtr.limit   = sizeof( idt ) - 1;
-	idtr.address = ( uintptr_t )idt;
+		memset( &idtr, 0, sizeof( idtr ) );
+		idtr.limit   = sizeof( idt ) - 1;
+		idtr.address = ( uintptr_t )idt;
+
+		log::printk( "Reloading interrupt descriptor table..\n" );
+	}
 
 	/* reload the IDT */
 	__asm__ __volatile__( "lidt (%0)" :: "r"( &idtr ) );
 };
-
 };
