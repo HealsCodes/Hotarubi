@@ -45,6 +45,7 @@
 #define MMU_PHYS_ADDR_2M( pdt , vaddr ) (  pdt[MMU_PDT_INDEX( vaddr )] & ~0xfffff )
 
 #define PHYS_ADDR( addr ) ( ( addr ) - physmm::physical_base_offset() )
+#define VIRT_ADDR( addr ) ( ( addr ) + physmm::physical_base_offset() )
 
 #ifdef KERNEL
 extern "C"
@@ -130,6 +131,63 @@ _map_region( uint64_t *pml4, uintptr_t vaddr, uintptr_t paddr, size_t len,
 	return true;
 }
 
+static bool
+_unmap_region( uint64_t *pml4, uint64_t vaddr, size_t len, bool free_page )
+{
+	uint64_t *pdpt  = nullptr,
+	         *pdt   = nullptr,
+	         *pt    = nullptr,
+	          paddr = 0;
+
+	if( len % PAGE_SIZE != 0 )
+	{
+		len += PAGE_SIZE;
+	}
+	len /= PAGE_SIZE;
+
+	/* unmap region expects pml4 to be accessible without any offset calculation */
+	if( pml4 == nullptr )
+	{
+		return false;
+	}
+
+	do
+	{
+		pdpt = ( uint64_t* )VIRT_ADDR( MMU_PDPT_ADDR( pml4, vaddr ) );
+		if( pdpt == nullptr )
+		{
+			continue;
+		}
+
+		pdt = ( uint64_t* )VIRT_ADDR( MMU_PDT_ADDR( pdpt, vaddr ) );
+		if( pdt == nullptr )
+		{
+			continue;
+		}
+
+		pt = ( uint64_t* )VIRT_ADDR( MMU_PT_ADDR( pdt, vaddr ) );
+		if( pt == nullptr )
+		{
+			continue;
+		}
+
+		paddr = MMU_PHYS_ADDR_4K( pt, vaddr );
+		if( paddr != 0 )
+		{
+			if( free_page )
+			{
+				physmm::free_page( ( void* )VIRT_ADDR( paddr ) );
+			}
+			pt[MMU_PT_INDEX( vaddr )] = 0;
+		}
+		/* FIXME: other cores need to know that too */
+		__asm__ __volatile__( "invlpg %0" :: "m"( vaddr ) );
+
+		vaddr += PAGE_SIZE;
+	} while( --len );
+	return true;
+}
+
 static
 void _create_system_vm( void )
 {
@@ -181,6 +239,60 @@ void _create_system_vm( void )
 error_out:
 	log::printk( "\nPANIC: out of memory while creating the system VM!\n" );
 	do {} while( 1 );
+}
+
+bool
+map_address( uint64_t vaddr, PageFlagSystemSet flags )
+{
+	uint64_t *pml4 = ( uint64_t* )processor::regs::read_cr3();
+	uintptr_t addr = ( uintptr_t )physmm::alloc_page();
+
+	return _map_region( pml4, vaddr, addr, PAGE_SIZE, flags );
+}
+
+bool
+map_fixed( uint64_t vaddr, uint64_t paddr, PageFlagSystemSet flags )
+{
+	uint64_t *pml4 = ( uint64_t* )processor::regs::read_cr3();
+	return _map_region( pml4, vaddr, paddr, PAGE_SIZE, flags );
+}
+
+bool
+map_address_range( uint64_t vaddr, size_t npages, PageFlagSystemSet flags )
+{
+	for( size_t n = 0; n < npages; ++n )
+	{
+		if( map_address( vaddr, flags ) == false )
+		{
+			/* backtrack */
+			vaddr -= PAGE_SIZE * n;
+			unmap_address_range( vaddr, n - 1 );
+			return false;
+		}
+		vaddr += PAGE_SIZE;
+	}
+	return true;
+}
+
+void
+unmap_address( uint64_t vaddr )
+{
+	uint64_t *pml4 = ( uint64_t* )processor::regs::read_cr3();
+	( void )_unmap_region( pml4, vaddr, PAGE_SIZE, true );
+}
+
+void
+unmap_fixed( uint64_t vaddr )
+{
+	uint64_t *pml4 = ( uint64_t* )processor::regs::read_cr3();
+	( void )_unmap_region( pml4, vaddr, PAGE_SIZE, false );
+}
+
+void
+unmap_address_range( uint64_t vaddr, size_t npages )
+{
+	uint64_t *pml4 = ( uint64_t* )processor::regs::read_cr3();
+	( void )_unmap_region( pml4, vaddr, PAGE_SIZE * npages, true );
 }
 
 void

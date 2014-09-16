@@ -40,9 +40,22 @@ namespace virtmm
 		kPageFlagDirty        = 1 << 6,
 		kPageFlagSizeExtend   = 1 << 7,
 		kPageFlagGlobal       = 1 << 8,
+
+		kPageFlagCopyOnWrite  = 1 << 9,
+		kPageFlagSparse       = 1 << 10,
+		kPageFlagSwappedOut   = 1 << 11,
+
 		kPageFlagNoExecute    = 0x8000000000000000,
 	};
 	BITMASK( PageFlagSystemSet );
+
+	bool map_address( uint64_t vaddr, PageFlagSystemSet flags );
+	bool map_fixed( uint64_t vaddr, uint64_t paddr, PageFlagSystemSet flags );
+	bool map_address_range( uint64_t vaddr, size_t npages, PageFlagSystemSet flags );
+
+	void unmap_address( uint64_t vaddr );
+	void unmap_fixed( uint64_t vaddr );
+	void unmap_address_range( uint64_t vaddr, size_t npages );
 
 	void init_ap( void );
 	void init( void );
