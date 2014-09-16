@@ -71,6 +71,9 @@ _interrupt_stub_\nr:
 	movw  $0x10, %ax
 	movw  %ax, %ds
 
+	/* pass a pointer to the stacked registers (64bit calling convention) */
+	movq  %rsp, %rdi
+
 	/* locate the correct RIP */
 	lea   _interrupt_pointer_table, %rbx
 	movq  8(%rbp), %rcx            /* 8(rbp) is the irq number */
