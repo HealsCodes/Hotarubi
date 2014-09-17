@@ -43,7 +43,10 @@ static struct kmalloc_cache kmalloc_cache_table[] = {
 	{  1024, nullptr },
 	{  2048, nullptr },
 	{  3072, nullptr },
-	{  4092, nullptr },
+	{  4096, nullptr },
+	{  8192, nullptr },
+	{ 12288, nullptr },
+	{ 16384, nullptr },
 	/* bigger stuff should be allocated in other ways ( for now ) */
 	{     0, nullptr }
 };
@@ -57,8 +60,11 @@ static const char *kmalloc_cache_names[] = {
 	"kmalloc::size-1024",
 	"kmalloc::size-2048",
 	"kmalloc::size-3072",
-	"kmalloc::size-4092",
-	""
+	"kmalloc::size-4096",
+	"kmalloc::size-8192",
+	"kmalloc::size-12288",
+	"kmalloc::size-16384",
+	"\0",
 };
 
 static inline struct kmalloc_cache*
@@ -164,8 +170,11 @@ init( void )
 	memory::cache::mem_cache_t cache = nullptr;
 	for( size_t i = 0; kmalloc_cache_table[i].size; ++i )
 	{
+		bool overflow_check = ( kmalloc_cache_table[i].size < 1024 );
+
 		cache = memory::cache::create( kmalloc_cache_names[i],
-		                               kmalloc_cache_table[i].size + sizeof( uintptr_t ) );
+		                               kmalloc_cache_table[i].size + sizeof( uintptr_t ),
+		                               16, overflow_check );
 		if( cache )
 		{
 			kmalloc_cache_table[i].cache = cache;
