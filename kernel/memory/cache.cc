@@ -52,9 +52,12 @@ struct mem_cache
 {
 	const char *name;
 	bool compact;
+	bool markers;
 
 	size_t obj_size;
 	size_t obj_align;
+
+	size_t alloc_size;
 
 	cache_obj_setup obj_setup = nullptr;
 	cache_obj_erase obj_erase = nullptr;
@@ -152,8 +155,8 @@ extern void  _backing_page_free( void *ptr, size_t n );
 #endif
 
 /* fetch the SLAB from the end of the supplied buffer */
-#define SLAB_INLINE( buffer ) \
-	( ( struct slab* )( ( uintptr_t )( buffer ) + SLAB_SIZE - sizeof( struct slab ) ) )
+#define SLAB_INLINE( buffer, cache ) \
+	( ( struct slab* )( ( uintptr_t )( buffer ) + ( cache )->alloc_size - sizeof( struct slab ) ) )
 
 /* fetch a SLAB from the slab-cache */
 #define SLAB_EXTERN( cache ) \
@@ -173,9 +176,9 @@ extern void  _backing_page_free( void *ptr, size_t n );
 static struct slab*
 _slab_alloc( struct mem_cache *cache )
 {
-	void *backing = cache->slab_alloc( SLAB_SIZE );
+	void *backing = cache->slab_alloc( cache->alloc_size );
 
-	cache->stats.allocation += SLAB_SIZE;
+	cache->stats.allocation += cache->alloc_size;
 
 	struct slab *slab;
 	size_t buff_size, buff_avail;
@@ -185,7 +188,7 @@ _slab_alloc( struct mem_cache *cache )
 		goto err_no_backing;
 	}
 
-	slab = ( ( cache->compact ) ? ( SLAB_INLINE( backing ) )
+	slab = ( ( cache->compact ) ? ( SLAB_INLINE( backing, cache ) )
 	                            : ( SLAB_EXTERN( slab_cache ) ) );
 
 	if( slab == nullptr )
@@ -201,16 +204,19 @@ _slab_alloc( struct mem_cache *cache )
 	/* calculate the size of a single buffer including alignment and possible
 	 * inline structures
 	 */
-	buff_size = cache->obj_size + BUFFER_MAGIC_SIZE + ( ( cache->compact ) ? sizeof( struct bufctl_inline ) : 0 );
+	buff_size  = cache->obj_size + ( ( cache->compact ) ? sizeof( struct bufctl_inline ) : 0 );
+	buff_size += ( cache->markers ) ? BUFFER_MAGIC_SIZE : 0;
+
 	while( buff_size % cache->obj_align != 0 )
 	{
 		++buff_size;
 	}
 
 	/* calculate the number of buffers in the slab */
-	buff_avail = ( ( cache->compact == false ) ? SLAB_SIZE : SLAB_SIZE - sizeof( struct slab ) ) / buff_size;
+	buff_avail = ( ( cache->compact == false ) ? cache->alloc_size
+	                                           : cache->alloc_size - sizeof( struct slab ) ) / buff_size;
 
-	if( buff_avail == 0 || buff_size > SLAB_SIZE )
+	if( buff_avail == 0 || buff_size > cache->alloc_size )
 	{
 		goto err_no_bufctl;
 	}
@@ -219,9 +225,9 @@ _slab_alloc( struct mem_cache *cache )
 	{
 		/* fill the slab */
 		void *buffer = ( void* )( ( uintptr_t )backing + buff_size * i );
-		uint16_t *magic = ( uint16_t* )( ( uintptr_t )buffer + cache->obj_size );
+		size_t obj_size = cache->obj_size + ( ( cache->markers ) ? BUFFER_MAGIC_SIZE : 0 );
 
-		struct bufctl *bufctl = ( ( cache->compact ) ? ( BUFCTL_INLINE( buffer, cache->obj_size + BUFFER_MAGIC_SIZE ) )
+		struct bufctl *bufctl = ( ( cache->compact ) ? ( BUFCTL_INLINE( buffer, obj_size ) )
 		                                             : ( BUFCTL_EXTERN( bufctl_cache ) ) );
 
 		if( bufctl == nullptr )
@@ -229,7 +235,11 @@ _slab_alloc( struct mem_cache *cache )
 			goto err_no_bufctl;
 		}
 
-		*magic = BUFFER_MAGIC_WORD;
+		if( cache->markers )
+		{
+			uint16_t *magic = ( uint16_t* )( ( uintptr_t )buffer + cache->obj_size );
+			*magic = BUFFER_MAGIC_WORD;
+		}
 
 		if( cache->obj_setup )
 		{
@@ -267,8 +277,8 @@ err_no_bufctl:
 	put_object( slab_cache, slab );
 
 err_no_slab:
-	cache->slab_free( backing, SLAB_SIZE );
-	cache->stats.allocation -= SLAB_SIZE;
+	cache->slab_free( backing, cache->alloc_size );
+	cache->stats.allocation -= cache->alloc_size;
 
 err_no_backing:
 	return nullptr;
@@ -294,7 +304,14 @@ _slab_release( struct mem_cache *cache, struct slab *slab )
 
 					if( cache->compact )
 					{
-						object = ( void* )( ( uintptr_t )bufctl - cache->obj_size - BUFFER_MAGIC_SIZE );
+						if( cache->markers )
+						{
+							object = ( void* )( ( uintptr_t )bufctl - cache->obj_size - BUFFER_MAGIC_SIZE );
+						}
+						else
+						{
+							object = ( void* )( ( uintptr_t )bufctl - cache->obj_size );
+						}
 					}
 					else
 					{
@@ -313,8 +330,8 @@ _slab_release( struct mem_cache *cache, struct slab *slab )
 			--cache->stats.slabs;
 		}
 		/* the rest is as simple as releasing the backing storage */
-		cache->slab_free( backing, SLAB_SIZE );
-		cache->stats.allocation -= SLAB_SIZE;
+		cache->slab_free( backing, cache->alloc_size );
+		cache->stats.allocation -= cache->alloc_size;
 	}
 }
 
@@ -330,7 +347,11 @@ _slab_get_object( struct mem_cache *cache, struct slab *slab )
 		++slab->refs;
 		if( cache->compact )
 		{
-			return ( void* )( ( uintptr_t )bufctl - ( cache->obj_size + BUFFER_MAGIC_SIZE ) );
+			if( cache->markers )
+			{
+				return ( void* )( ( uintptr_t )bufctl - ( cache->obj_size + BUFFER_MAGIC_SIZE ) );
+			}
+			return ( void* )( ( uintptr_t )bufctl - ( cache->obj_size ) );
 		}
 		else
 		{
@@ -407,6 +428,7 @@ _cache_sort( struct mem_cache *cache )
 
 static void
 _cache_init( struct mem_cache *cache, const char *name, size_t size, size_t align,
+             bool check_overflow = true,
              cache_obj_setup setup = nullptr, cache_obj_erase erase = nullptr,
              backend_alloc back_alloc = nullptr, backend_free back_free = nullptr )
 {
@@ -417,8 +439,14 @@ _cache_init( struct mem_cache *cache, const char *name, size_t size, size_t alig
 	cache->obj_erase  = erase;
 	cache->slab_alloc = ( back_alloc ) ? back_alloc : _backing_page_alloc;
 	cache->slab_free  = ( back_free )  ? back_free  : _backing_page_free;
-	cache->compact    = cache->obj_size < SLAB_MAX_FRAGMENT_SIZE;
-	
+	cache->alloc_size = SLAB_SIZE;
+	while( cache->alloc_size < size )
+	{
+		cache->alloc_size += SLAB_SIZE;
+	}
+	cache->compact    = cache->obj_size < SLAB_MAX_FRAGMENT_SIZE( cache->alloc_size );
+	cache->markers    = check_overflow;
+
 	memset( &cache->stats, 0, sizeof( mem_cache_stats_t ) );
 
 	INIT_LIST( cache->free );
@@ -476,7 +504,7 @@ put_object( mem_cache_t cache, void *ptr )
 	if( cache->compact )
 	{
 		/* no need for hash lookups, we can access the bufctl from ptr */
-		bufctl = BUFCTL_INLINE( ptr, cache->obj_size + 2 );
+		bufctl = BUFCTL_INLINE( ptr, cache->obj_size + ( ( cache->markers ) ? BUFFER_MAGIC_SIZE : 0 ) );
 	}
 	else
 	{
@@ -494,10 +522,15 @@ put_object( mem_cache_t cache, void *ptr )
 
 	if( bufctl != nullptr )
 	{
-		magic = ( uint16_t* )( ( uintptr_t )ptr + cache->obj_size );
-		if( *magic != BUFFER_MAGIC_WORD )
+		if( cache->markers )
 		{
-			*magic = BUFFER_MAGIC_WORD;
+			magic = ( uint16_t* )( ( uintptr_t )ptr + cache->obj_size );
+			if( *magic != BUFFER_MAGIC_WORD )
+			{
+				log::printk( "cache::put_object: %p possible overflow (magic: %02x)\n",
+				             ptr, *magic );
+				*magic = BUFFER_MAGIC_WORD;
+			}
 		}
 		_slab_put_object( bufctl->slab, bufctl );
 		_cache_sort( cache );
@@ -513,7 +546,7 @@ put_object( mem_cache_t cache, void *ptr )
 #undef SLAB_EXTERN
 
 mem_cache_t
-create( const char *name, size_t size, size_t align,
+create( const char *name, size_t size, size_t align, bool check_overflow,
         cache_obj_setup setup, cache_obj_erase erase,
         backend_alloc back_alloc, backend_free back_free )
 {
@@ -527,7 +560,8 @@ create( const char *name, size_t size, size_t align,
 			back_free  = _backing_page_free;
 		}
 
-		_cache_init( cache, name, size, align, setup, erase, back_alloc, back_free );
+		_cache_init( cache, name, size, align, check_overflow,
+		             setup, erase, back_alloc, back_free );
 	}
 	return cache;
 }

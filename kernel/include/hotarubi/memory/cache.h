@@ -31,7 +31,7 @@ namespace memory
 namespace cache
 {
 	#define SLAB_SIZE PAGE_SIZE
-	#define SLAB_MAX_FRAGMENT_SIZE SLAB_SIZE / 8
+	#define SLAB_MAX_FRAGMENT_SIZE( x ) ( x ) / 8
 
 	typedef void  (*cache_obj_setup)( void *ptr, size_t obj_size );
 	typedef void  (*cache_obj_erase)( void *ptr );
@@ -55,6 +55,7 @@ namespace cache
 	typedef struct mem_cache_stats mem_cache_stats_t;
 
 	mem_cache_t create( const char *name, size_t size, size_t align = 1,
+		                bool check_overflow = true,
 		                cache_obj_setup setup = nullptr,
 		                cache_obj_erase erase = nullptr,
 		                backend_alloc back_alloc = nullptr, 
