@@ -28,4 +28,16 @@
 #include <hotarubi/memory/const.h>
 #include <hotarubi/memory/kmalloc.h>
 
+namespace memory
+{
+	inline void init( struct multiboot_info *multiboot_info )
+	{
+		/* make sure these are called in correct order */
+		physmm::init( multiboot_info );
+		virtmm::init();
+		cache::init();
+		kmalloc::init();
+	};
+};
+
 #endif
