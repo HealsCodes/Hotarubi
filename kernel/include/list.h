@@ -215,4 +215,87 @@ static inline void slist_del( struct slist_head *head, struct slist_head *elem )
 	}
 };
 
+/* hlist_* and HLIST_* -- doubly linked lists with single head
+ *
+ * The hlist_* functions and macros provide a doubly-linked inline list
+ * with O(1) support for member insertion at the list head and member deletion.
+ * 
+ * HLIST_FOREACH_* macros provide a shortcut to iterate over the members of the
+ * list including support for item deletion the using the _MUTABLE version.
+ *
+ * hlist_* is intended as a compromisse between the insertion / deletion speed 
+ * of a doubly linked list and the size efficiency of the slist_head.
+ * The main purpose is the use in linked hash tables where it reduces the space
+ * required to store a huge ammount of list heads.
+ */
+
+struct hlist_head
+{
+	struct hlist_node *next;
+};
+
+struct hlist_node
+{
+	struct hlist_node *next;   /* pointer to next node */
+	struct hlist_node **pprev; /* pointer to next field of the previous node */
+};
+
+#define HLIST_HEAD( name ) struct hlist_head name
+#define HLIST_NODE( name ) struct hlist_node name
+#define HLIST_HEAD_INIT( name ) { nullptr }
+#define HLIST_NODE_INIT( name ) { nullptr, nullptr }
+
+#define INIT_HLIST_HEAD( name ) name = HLIST_HEAD_INIT( name )
+#define INIT_HLIST_NODE( name ) name = HLIST_NODE_INIT( name )
+
+#define HLIST_ENTRY( elem, type, link ) \
+	( ( type * )( ( uintptr_t )elem - __builtin_offsetof( type, link ) ) )
+
+/* shortcut to access the head entry */
+#define HLIST_HEAD_ENTRY( head, type, link ) HLIST_ENTRY( ( head )->next, type, link )
+
+/* iterate over each link in the list */
+#define HLIST_FOREACH( ptr, head ) \
+	for( struct hlist_node *ptr = ( head )->next; \
+	     ptr != nullptr; \
+	     ptr  = ptr->next )
+
+/* iterate over each link in the list with support for the deletion of links */
+#define HLIST_FOREACH_MUTABLE( ptr, head ) \
+	for( struct hlist_node *ptr = ( head )->next, \
+		                   *ref = ptr->next; \
+		 ptr != nullptr && ( { ref = ptr->next; 1; } ); \
+		 ptr  = ref )
+
+static inline void hlist_add( struct hlist_head *head, struct hlist_node *elem )
+{
+	struct hlist_node *first = head->next;
+	elem->next = first;
+	if( first != nullptr )
+	{
+		first->pprev = &elem->next;
+	}
+	head->next  = elem;
+	elem->pprev = &head->next;
+};
+
+static inline void hlist_del( struct hlist_node *elem )
+{
+	struct hlist_node *next   = elem->next,
+	                  **pprev = elem->pprev;
+
+	*pprev = elem->next;
+	if( next )
+	{
+		next->pprev = pprev;
+	}
+	elem->next  = nullptr;
+	elem->pprev = nullptr;
+};
+
+static inline bool hlist_empty( struct hlist_head *head )
+{
+	return head->next == nullptr;
+};
+
 #endif

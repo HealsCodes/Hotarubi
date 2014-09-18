@@ -273,3 +273,95 @@ TEST( slist, foreach_mutable )
 	EXPECT_EQ( expected_index, 0 );
 	EXPECT_EQ( 3, SLIST_HEAD_ENTRY( &test_slist, struct slist_item, items )->id );
 }
+
+/* hlist tests */
+
+struct hlist_item
+{
+	int id;
+	HLIST_NODE( items );
+};
+
+static hlist_item g = { .id = 1, .items = HLIST_NODE_INIT( g ) }, 
+                  h = { .id = 2, .items = HLIST_NODE_INIT( h ) },
+                  i = { .id = 3, .items = HLIST_NODE_INIT( i ) };
+
+HLIST_HEAD( test_hlist );
+
+TEST( hlist, init )
+{
+	INIT_HLIST_HEAD( test_hlist );
+	EXPECT_EQ( true, hlist_empty( &test_hlist ) );
+}
+
+TEST( hlist, add )
+{
+	INIT_HLIST_HEAD( test_hlist );
+
+	hlist_add( &test_hlist, &g.items );
+	EXPECT_EQ( 1, HLIST_HEAD_ENTRY( &test_hlist, struct hlist_item, items )->id );
+
+	hlist_add( &test_hlist, &h.items );
+	EXPECT_EQ( 2, HLIST_HEAD_ENTRY( &test_hlist, struct hlist_item, items )->id );
+
+	hlist_add( &test_hlist, &i.items );
+	EXPECT_EQ( 3, HLIST_HEAD_ENTRY( &test_hlist, struct hlist_item, items )->id );
+}
+
+TEST( hlist, del )
+{
+	INIT_HLIST_HEAD( test_hlist );
+
+	hlist_add( &test_hlist, &g.items );
+	hlist_add( &test_hlist, &h.items );
+	hlist_add( &test_hlist, &i.items );
+
+	EXPECT_FALSE( hlist_empty( &test_hlist ) );
+	EXPECT_EQ( 3, HLIST_HEAD_ENTRY( &test_hlist, struct hlist_item, items )->id );
+
+	hlist_del( &i.items );
+	EXPECT_FALSE( hlist_empty( &test_hlist ) );
+	EXPECT_EQ( 2, HLIST_HEAD_ENTRY( &test_hlist, struct hlist_item, items )->id );
+
+	hlist_del( &h.items );
+	EXPECT_FALSE( hlist_empty( &test_hlist ) );
+	EXPECT_EQ( 1, HLIST_HEAD_ENTRY( &test_hlist, struct hlist_item, items )->id );
+
+	hlist_del( &g.items );
+	EXPECT_TRUE( hlist_empty( &test_hlist ) );
+}
+
+TEST( hlist, foreach )
+{
+	INIT_HLIST_HEAD( test_hlist );
+	hlist_add( &test_hlist, &g.items );
+	hlist_add( &test_hlist, &h.items );
+	hlist_add( &test_hlist, &i.items );
+
+	int expected_index = 3;
+	HLIST_FOREACH( item, &test_hlist )
+	{
+		EXPECT_EQ( expected_index--, HLIST_ENTRY( item, struct hlist_item, items )->id );
+	}
+}
+
+TEST( hlist, foreach_mutable )
+{
+	INIT_HLIST_HEAD( test_hlist );
+	hlist_add( &test_hlist, &g.items );
+	hlist_add( &test_hlist, &h.items );
+	hlist_add( &test_hlist, &i.items );
+
+	int expected_index = 3;
+	HLIST_FOREACH_MUTABLE( item, &test_hlist )
+	{
+		EXPECT_EQ( expected_index, HLIST_ENTRY( item, struct hlist_item, items )->id );
+		if( expected_index-- == 2 )
+		{
+			/* the iteration should still finish up to 1 */
+			hlist_del( item );
+		}
+	}
+	EXPECT_EQ( expected_index, 0 );
+	EXPECT_EQ( 3, HLIST_HEAD_ENTRY( &test_hlist, struct hlist_item, items )->id );
+}
