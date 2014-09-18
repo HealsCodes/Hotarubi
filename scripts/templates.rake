@@ -87,7 +87,7 @@ rule '.h' => '.h.erb' do |t|
         :release_major => RELEASE_MAJOR,
         :release_minor => RELEASE_MINOR,
         :release_micro => RELEASE_MICRO,
-        :git_revision  => "(git:#{`git log -1 --pretty=format:%h`.chomp})",
+        :git_revision  => "(git:#{`git rev-parse --abbrev-ref HEAD`.chomp}:#{`git log -1 --pretty=format:%h`.chomp})",
         :builder_tag   => "#{DateTime.now.to_s} - #{ENV['USER']}@#{`hostname`.chomp}"
       )
   end

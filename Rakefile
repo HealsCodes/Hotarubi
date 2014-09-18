@@ -3,7 +3,7 @@ require 'yaml'
 require 'rake/clean'
 require 'rake/loaders/makefile'
 
-RELEASE_NAME  = ''
+RELEASE_NAME  = "kyushu"
 RELEASE_MAJOR = 0
 RELEASE_MINOR = 1
 RELEASE_MICRO = 0
