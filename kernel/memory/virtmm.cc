@@ -37,15 +37,15 @@
 #define MMU_PDT_INDEX( x )  ( ( ( x ) >> 21 ) & 0x1ff )
 #define MMU_PT_INDEX( x )   ( ( ( x ) >> 12 ) & 0x1ff )
 
-#define MMU_PDPT_ADDR( pml4, vaddr ) ( pml4[MMU_PML4_INDEX( vaddr )] & ~0xfff )
-#define MMU_PDT_ADDR( pdpt, vaddr )  ( pdpt[MMU_PDPT_INDEX( vaddr )] & ~0xfff )
-#define MMU_PT_ADDR( pdt , vaddr )   (  pdt[MMU_PDT_INDEX ( vaddr )] & ~0xfff )
+#define MMU_PDPT_ADDR( pml4, vaddr ) ( pml4[MMU_PML4_INDEX( vaddr )] & ~kPageFlagMask )
+#define MMU_PDT_ADDR( pdpt, vaddr )  ( pdpt[MMU_PDPT_INDEX( vaddr )] & ~kPageFlagMask )
+#define MMU_PT_ADDR( pdt , vaddr )   (  pdt[MMU_PDT_INDEX ( vaddr )] & ~kPageFlagMask )
 
-#define MMU_PHYS_ADDR_4K( pt  , vaddr ) (   pt[MMU_PT_INDEX ( vaddr )] & ~0xfff )
-#define MMU_PHYS_ADDR_2M( pdt , vaddr ) (  pdt[MMU_PDT_INDEX( vaddr )] & ~0xfffff )
+#define MMU_PHYS_ADDR_4K( pt  , vaddr ) (   pt[MMU_PT_INDEX ( vaddr )] & ~kPageFlagMask )
+#define MMU_PHYS_ADDR_2M( pdt , vaddr ) (  pdt[MMU_PDT_INDEX( vaddr )] & ~kPageFlagMask2M )
 
-#define PHYS_ADDR( addr ) ( ( addr ) - physmm::physical_base_offset() )
-#define VIRT_ADDR( addr ) ( ( addr ) + physmm::physical_base_offset() )
+#define PHYS_ADDR( addr ) ( ( ( addr ) == 0 ) ? 0 : ( ( addr ) - physmm::physical_base_offset() ) )
+#define VIRT_ADDR( addr ) ( ( ( addr ) == 0 ) ? 0 : ( ( addr ) + physmm::physical_base_offset() ) )
 
 #ifdef KERNEL
 extern "C"
@@ -65,6 +65,7 @@ extern uint64_t memory_upper_bound;
 
 namespace virtmm
 {
+const uint64_t map_invalid = 0xffffffffffffffff;
 static uint64_t *system_pml4 = nullptr;
 
 static bool
@@ -244,7 +245,7 @@ error_out:
 bool
 map_address( uint64_t vaddr, PageFlagSystemSet flags )
 {
-	uint64_t *pml4 = ( uint64_t* )processor::regs::read_cr3();
+	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	uintptr_t addr = ( uintptr_t )physmm::alloc_page();
 
 	return _map_region( pml4, vaddr, addr, PAGE_SIZE, flags );
@@ -253,7 +254,7 @@ map_address( uint64_t vaddr, PageFlagSystemSet flags )
 bool
 map_fixed( uint64_t vaddr, uint64_t paddr, PageFlagSystemSet flags )
 {
-	uint64_t *pml4 = ( uint64_t* )processor::regs::read_cr3();
+	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	return _map_region( pml4, vaddr, paddr, PAGE_SIZE, flags );
 }
 
@@ -277,22 +278,72 @@ map_address_range( uint64_t vaddr, size_t npages, PageFlagSystemSet flags )
 void
 unmap_address( uint64_t vaddr )
 {
-	uint64_t *pml4 = ( uint64_t* )processor::regs::read_cr3();
+	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	( void )_unmap_region( pml4, vaddr, PAGE_SIZE, true );
 }
 
 void
 unmap_fixed( uint64_t vaddr )
 {
-	uint64_t *pml4 = ( uint64_t* )processor::regs::read_cr3();
+	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	( void )_unmap_region( pml4, vaddr, PAGE_SIZE, false );
 }
 
 void
 unmap_address_range( uint64_t vaddr, size_t npages )
 {
-	uint64_t *pml4 = ( uint64_t* )processor::regs::read_cr3();
+	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	( void )_unmap_region( pml4, vaddr, PAGE_SIZE * npages, true );
+}
+
+bool
+lookup_mapping( uint64_t vaddr, uint64_t &pml4e, uint64_t &pdpte,
+                                uint64_t &pdte, uint64_t &pte )
+{
+	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() ),
+	         *ptr  = nullptr;
+
+	if( pml4 == nullptr )
+	{
+		goto err_pml4;
+	}
+
+	pml4e = pml4[MMU_PML4_INDEX( vaddr )];
+	ptr   = ( uint64_t* )VIRT_ADDR( MMU_PDPT_ADDR( pml4, vaddr ) );
+	if( ptr == nullptr )
+	{
+		goto err_pml4;
+	}
+
+	pdpte = ptr[MMU_PDPT_INDEX( vaddr )];
+	ptr   = ( uint64_t* )VIRT_ADDR( MMU_PDT_ADDR( ptr, vaddr ) );
+	if( ptr == nullptr )
+	{
+		goto err_pdpt;
+	}
+	pdte = ptr[MMU_PDT_INDEX( vaddr )];
+	ptr  = ( uint64_t* )VIRT_ADDR( MMU_PT_ADDR( ptr, vaddr ) );
+	if( ptr == nullptr )
+	{
+		goto err_pdt;
+	}
+	pte = ptr[MMU_PT_INDEX( vaddr )];
+	ptr = ( uint64_t* )VIRT_ADDR( MMU_PHYS_ADDR_4K( ptr, vaddr ) );
+	if( ptr == nullptr )
+	{
+		goto err_pt;
+	}
+	return true;
+
+err_pml4:
+	pml4e = map_invalid;
+err_pdpt:
+	pdpte = map_invalid;
+err_pdt:
+	pdte = map_invalid;
+err_pt:
+	pte = map_invalid;
+	return false;
 }
 
 void

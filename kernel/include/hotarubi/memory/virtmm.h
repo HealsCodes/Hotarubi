@@ -22,13 +22,14 @@
 #ifndef __MEMORY_VIRTMM_H
 #define __MEMORY_VIRTMM_H 1
 
+#include <stdint.h>
 #include <bitmask.h>
 
 namespace memory
 {
 namespace virtmm
 {
-	enum PageFlagSystemSet
+	enum PageFlagSystemSet : uint64_t
 	{
 		kPageFlagNone         = 0,
 		kPageFlagPresent      = 1 << 0,
@@ -45,9 +46,13 @@ namespace virtmm
 		kPageFlagSparse       = 1 << 10,
 		kPageFlagSwappedOut   = 1 << 11,
 
-		kPageFlagNoExecute    = 0x8000000000000000,
+		kPageFlagNoExecute    = 0x8000000000000000UL,
+		kPageFlagMask         = 0xffe0000000000fffUL,
+		kPageFlagMask2M       = 0xffe00000000fffffUL,
 	};
 	BITMASK( PageFlagSystemSet );
+
+	extern const uint64_t map_invalid;
 
 	bool map_address( uint64_t vaddr, PageFlagSystemSet flags );
 	bool map_fixed( uint64_t vaddr, uint64_t paddr, PageFlagSystemSet flags );
@@ -56,6 +61,9 @@ namespace virtmm
 	void unmap_address( uint64_t vaddr );
 	void unmap_fixed( uint64_t vaddr );
 	void unmap_address_range( uint64_t vaddr, size_t npages );
+
+	bool lookup_mapping( uint64_t vaddr, uint64_t &pml4e, uint64_t &pdpte,
+	                                     uint64_t &pdte, uint64_t &pte );
 
 	void init_ap( void );
 	void init( void );
