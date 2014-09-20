@@ -67,15 +67,19 @@ static const char *kmalloc_cache_names[] = {
 	"\0",
 };
 
+
 static inline struct kmalloc_cache*
 _lookup_cache_for_ptr( void *ptr )
 {
-	uintptr_t *obj = ( uintptr_t* )( ( uintptr_t )ptr - sizeof( uintptr_t ) );
-	for( size_t i = 0; kmalloc_cache_table[i].size; ++i )
+	memory::cache::mem_cache_t cache = memory::cache::get_cache( ptr );
+	if( cache != nullptr )
 	{
-		if( ( uintptr_t )kmalloc_cache_table[i].cache == *obj )
+		for( size_t i = 0; kmalloc_cache_table[i].size; ++i )
 		{
-			return &kmalloc_cache_table[i];
+			if( cache == kmalloc_cache_table[i].cache )
+			{
+				return &kmalloc_cache_table[i];
+			}
 		}
 	}
 	return nullptr;
@@ -100,13 +104,7 @@ kmalloc( size_t n )
 	struct kmalloc_cache *cache = _lookup_cache_for_size( n );
 	if( cache != nullptr )
 	{
-		uintptr_t *obj = ( uintptr_t* )memory::cache::get_object( cache->cache );
-		if( obj != nullptr )
-		{
-			*obj = ( uintptr_t )cache->cache;
-			++obj;
-		}
-		return ( void* )obj;
+		return ( void* )memory::cache::get_object( cache->cache );
 	}
 	log::printk( "kmalloc: can't serve request for %zd bytes!\n", n );
 	return nullptr;
@@ -121,11 +119,10 @@ kfree( void *ptr )
 		return;
 	}
 
-	struct kmalloc_cache *cache = _lookup_cache_for_ptr( ptr );
+	memory::cache::mem_cache_t cache = memory::cache::get_cache( ptr );
 	if( cache != nullptr )
 	{
-		void *obj = ( void* )( ( uintptr_t )ptr - sizeof( uintptr_t ) );
-		memory::cache::put_object( cache->cache, obj );
+		memory::cache::put_object( cache, ptr );
 		return;
 	}
 	log::printk( "kfree: attempting to free %p which is not managed by kmalloc!\n",
@@ -144,13 +141,10 @@ krealloc( void *ptr, size_t n )
 	if( cache != nullptr )
 	{
 		void *res = kmalloc( n );
-
 		if( res != nullptr )
 		{
-			void *obj = ( void* )( ( uintptr_t )ptr - sizeof( uintptr_t ) );
-
 			memcpy( res, ptr, ( n > cache->size ) ? cache->size : n );
-			memory::cache::put_object( cache->cache, obj );
+			memory::cache::put_object( cache->cache, cache );
 			return res;
 		}
 	}

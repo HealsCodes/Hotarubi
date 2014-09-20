@@ -134,7 +134,7 @@ _backing_page_alloc( size_t n )
 		/* round up to the nearest multiple of PAGE_SIZE */
 		n += PAGE_SIZE - ( n % PAGE_SIZE );
 	}
-	return physmm::alloc_page_range( n / PAGE_SIZE );
+	return physmm::alloc_page_range( n / PAGE_SIZE, __PPF( Locked ) | __PPF( Slab ) );
 }
 
 static void
@@ -178,6 +178,15 @@ _slab_alloc( struct mem_cache *cache )
 {
 	void *backing = cache->slab_alloc( cache->alloc_size );
 
+	if( cache->slab_alloc == _backing_page_alloc )
+	{
+		/* associate the page to this cache */
+		physmm::page_map_t *page_map = physmm::get_page_map( __PA( backing ) );
+		if( page_map != nullptr )
+		{
+			page_map->link.next = ( struct list_head* )cache;
+		}
+	}
 	cache->stats.allocation += cache->alloc_size;
 
 	struct slab *slab;
@@ -633,6 +642,19 @@ stats( mem_cache_t cache, mem_cache_stats_t &statbuf )
 	cache->lock.lock();
 	memcpy( &statbuf, &cache->stats, sizeof( mem_cache_stats_t ) );
 	cache->lock.unlock();
+}
+
+mem_cache_t get_cache( void *ptr )
+{
+	if( ptr != nullptr )
+	{
+		physmm::page_map_t *map = physmm::get_page_map( __PA( ptr ) );
+		if( map != nullptr && map->flags & __PPF( Slab ) )
+		{
+			return ( mem_cache_t )map->link.next;
+		}
+	}
+	return nullptr;
 }
 
 void

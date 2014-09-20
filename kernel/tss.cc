@@ -52,11 +52,11 @@ init( void )
 	}
 
 	memset( tss, 0, sizeof( struct tss ) );
-	tss->rsp0   = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
-	tss->ist[0] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
-	tss->ist[1] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
-	tss->ist[2] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
-	tss->ist[3] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page();
+	tss->rsp0   = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page( __PPF( Locked ) );
+	tss->ist[0] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page( __PPF( Locked ) );
+	tss->ist[1] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page( __PPF( Locked ) );
+	tss->ist[2] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page( __PPF( Locked ) );
+	tss->ist[3] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page( __PPF( Locked ) );
 
 	/* FIXME: verify those allocations! */
 	processor::local_data()->tss = tss;

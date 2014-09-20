@@ -25,6 +25,7 @@
 
 #include <hotarubi/memory/physmm.h>
 #include <hotarubi/memory/const.h>
+#include <hotarubi/memory/page.h>
 
 #include <hotarubi/lock.h>
 #include <hotarubi/log/log.h>
@@ -33,16 +34,20 @@
 extern "C" unsigned char __end[]; /* defined in link.ld */
 #endif
 
+/* convert x to a physical address with regard for physical_base_offset */
+#define __XPA( x )( ( ( x ) >= physical_base_offset() ) ? __PA( x ) : ( x ) )
+
 namespace memory
 {
 namespace physmm
 {
 
-static uint32_t *memory_map_data = nullptr;
-static uint32_t  memory_map_size = 0;
-static uint32_t  memory_map_used = 0;
-static uint64_t  memory_map_base = 0; /* offset applied to physical addresses */
-static SpinLock  memory_map_lock;
+       page_map_t *memory_map_pages = nullptr;
+static uint32_t   *memory_map_data  = nullptr;
+static uint32_t    memory_map_size  = 0;
+static uint32_t    memory_map_used  = 0;
+static uint64_t    memory_map_base  = 0; /* offset applied to physical addresses */
+static SpinLock    memory_map_lock;
 uint64_t memory_upper_bound = 0;
 
 static inline bool
@@ -156,6 +161,38 @@ _search_first_free_range( unsigned num )
 	return 0;
 }
 
+static void
+_flag_page_range( uint64_t addr, PhysPageFlagSet flags, size_t len )
+{
+#ifdef KERNEL
+
+	len /= PAGE_SIZE;
+	do {
+		INIT_LIST( memory_map_pages[__XPA( addr ) >> PAGE_SHIFT].link );
+		memory_map_pages[__XPA( addr ) >> PAGE_SHIFT].flags = flags;
+
+		addr += PAGE_SIZE;
+	} while( len-- );
+
+#endif
+}
+
+static void
+_free_page_range( uint64_t addr, size_t len )
+{
+#ifdef KERNEL
+
+	len /= PAGE_SIZE;
+	do {
+		memset( &memory_map_pages[__XPA( addr ) >> PAGE_SHIFT], 0, sizeof( page_map_t ) );
+		memory_map_pages[__XPA( addr ) >> PAGE_SHIFT].flags = kPPFlagUnused;
+
+		addr += PAGE_SIZE;
+	} while( len-- );
+
+#endif
+}
+
 #ifdef KERNEL
 
 void
@@ -219,6 +256,7 @@ init( const multiboot_info_t *boot_info )
 	log::printk( "-----------------------------------------\n" );
 	log::printk( "%lu MB usable RAM\n", mem_available / 0x100000 );
 	log::printk( "%u KB required for physical bitmap\n", memory_map_size / 1024 );
+	log::printk( "%lu MB required for page map data\n", sizeof( page_map_t ) * memory_map_size * 8 / 1024 / 1024 );
 	log::printk( "-----------------------------------------\n" );
 
 	/* check for the first free location that has enough space */
@@ -241,20 +279,22 @@ init( const multiboot_info_t *boot_info )
 		}
 	}
 
-	if( first_free + memory_map_size > first_chunk_above_1mb )
+	uint32_t page_map_size = sizeof( page_map_t ) * memory_map_size * 8;
+	if( first_free + memory_map_size + page_map_size > first_chunk_above_1mb )
 	{
 		// FIXME: I need a panic() method!
 		log::printk( "\nPANIC: not enough free RAM to initialize memory bitmap!\n" );
 		do {} while( 1 );
 	}
 	first_free += sizeof( uint64_t );
-
 	memory_map_data = ( uint32_t* )first_free;
+	memory_map_pages = ( page_map_t* )( first_free + memory_map_size );
+
 	memory_map_used = memory_map_size * 8;
 
 	memset( memory_map_data, 0xff, memory_map_size );
 
-	first_free += memory_map_size + PAGE_SIZE;
+	first_free += memory_map_size + page_map_size + PAGE_SIZE;
 	first_free &= 0x7ffff000;
 
 	/* second iteration, mark non-reserved memory above first_free as available */
@@ -272,13 +312,21 @@ init( const multiboot_info_t *boot_info )
 		    mem_map->addr >= first_free )
 		{
 			_mark_free_range( mem_map->addr, mem_map->len );
+			_free_page_range( mem_map->addr, mem_map->len );
 		}
+		else
+		{
+			_flag_page_range( mem_map->addr, kPPFlagReserved, mem_map->len );
+		}
+
 		mem_map = ( multiboot_memory_map_t* )( ( uintptr_t )mem_map + mem_map->size + sizeof( mem_map->size ) );
 	} while( ( uintptr_t)mem_map < boot_info->mmap_addr + boot_info->mmap_length );
 
 	log::printk( "Physical memory map at %p\n"
+	             "Page metadata map at %p\n"
 	             "-- %u entries, %u free (spanning %lu MB)\n",
 	             memory_map_data,
+	             memory_map_pages,
 	             memory_map_size * 8,
 	             memory_map_size * 8 - memory_map_used,
 	             ( (uint64_t) PAGE_SIZE * ( memory_map_size * 8 - memory_map_used ) / 0x100000 ) );
@@ -292,10 +340,12 @@ set_physical_base_offset( const uint64_t offset )
 	/* change the expected location of the memory map and set the offset for
 	 * physical addresses used alloc_page() and free_page()
 	 */
-	memory_map_data = ( uint32_t* )( ( uintptr_t )memory_map_data - memory_map_base + offset );
-	memory_map_base = offset;
+	memory_map_data  = ( uint32_t* )( ( uintptr_t )memory_map_data - memory_map_base + offset );
+	memory_map_pages = ( page_map_t* )( ( uintptr_t )memory_map_pages - memory_map_base + offset );
+	memory_map_base  = offset;
 
 	log::printk( "Physical memory map relocated to %p\n", memory_map_data );
+	log::printk( "Page metadata map relocated to %p\n", memory_map_pages );
 }
 
 uint64_t 
@@ -311,7 +361,7 @@ free_page_count( void )
 }
 
 void*
-alloc_page( void )
+alloc_page( PhysPageFlagSet flags )
 {
 	uint64_t addr;
 
@@ -329,19 +379,20 @@ alloc_page( void )
 	}
 
 	_mark_used_range( addr, PAGE_SIZE );
+	_flag_page_range( addr, flags, PAGE_SIZE );
 	memory_map_lock.unlock();
 
 	return ( void* )( addr + memory_map_base );
 }
 
 void*
-alloc_page_range( unsigned count )
+alloc_page_range( unsigned count, PhysPageFlagSet flags )
 {
 	uint64_t addr;
 
 	if( count <= 1 )
 	{
-		return alloc_page();
+		return alloc_page( flags );
 	}
 
 	memory_map_lock.lock();
@@ -358,6 +409,7 @@ alloc_page_range( unsigned count )
 	}
 
 	_mark_used_range( addr, PAGE_SIZE * count );
+	_flag_page_range( addr, flags, PAGE_SIZE * count );
 	memory_map_lock.unlock();
 
 	return ( void* )( addr + memory_map_base );
@@ -386,6 +438,7 @@ free_page( const void* page )
 
 	memory_map_lock.lock();
 	_mark_free_range( addr, PAGE_SIZE );
+	_free_page_range( addr, PAGE_SIZE );
 	memory_map_lock.unlock();
 }
 
@@ -424,8 +477,16 @@ free_page_range( const void* page, unsigned count )
 	{
 		memory_map_lock.lock();
 		_mark_free_range( addr, count * PAGE_SIZE );
+		_free_page_range( addr, count * PAGE_SIZE );
 		memory_map_lock.unlock();
 	}
+}
+
+page_map_t*
+get_page_map( uint64_t paddr )
+{
+	return ( ( paddr >> PAGE_SHIFT ) < memory_map_size ) ? &memory_map_pages[ paddr >> 12 ]
+	                                                     : nullptr;
 }
 
 };

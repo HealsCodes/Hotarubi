@@ -35,6 +35,8 @@ namespace log
 		memory::physmm::memory_map_used = used; \
 	} while( 0 )
 
+#define NO_FLAGS __PPF( Unused )
+
 TEST( memory_map, _mark_used )
 {
 	uint32_t map_1[] = { 0xffffffff, 0xffffffff };
@@ -177,19 +179,19 @@ TEST( physmm, alloc_page )
 	SET_MEMORY_MAP( map, 61 );
 	EXPECT_EQ( 3, memory::physmm::free_page_count() );
 
-	EXPECT_EQ( 0x1000    , ( uintptr_t )memory::physmm::alloc_page() );
+	EXPECT_EQ( 0x1000    , ( uintptr_t )memory::physmm::alloc_page( NO_FLAGS ) );
 	EXPECT_EQ( 0xfffffff3, map[0] );
 	EXPECT_EQ( 2         , memory::physmm::free_page_count() );
 
-	EXPECT_EQ( 0x2000    , ( uintptr_t )memory::physmm::alloc_page() );
+	EXPECT_EQ( 0x2000    , ( uintptr_t )memory::physmm::alloc_page( NO_FLAGS ) );
 	EXPECT_EQ( 0xfffffff7, map[0] );
 	EXPECT_EQ( 1         , memory::physmm::free_page_count() );
 
-	EXPECT_EQ( 0x3000    , ( uintptr_t )memory::physmm::alloc_page() );
+	EXPECT_EQ( 0x3000    , ( uintptr_t )memory::physmm::alloc_page( NO_FLAGS ) );
 	EXPECT_EQ( 0xffffffff, map[0] );
 	EXPECT_EQ( 0         , memory::physmm::free_page_count() );
 
-	EXPECT_EQ( nullptr, memory::physmm::alloc_page() );
+	EXPECT_EQ( nullptr, memory::physmm::alloc_page( NO_FLAGS ) );
 }
 
 TEST( physmm, alloc_page_range )
@@ -199,11 +201,11 @@ TEST( physmm, alloc_page_range )
 	SET_MEMORY_MAP( map, 61 );
 	EXPECT_EQ( 3, memory::physmm::free_page_count() );
 
-	EXPECT_EQ( 0x1000    , ( uintptr_t )memory::physmm::alloc_page_range( 2 ) );
+	EXPECT_EQ( 0x1000    , ( uintptr_t )memory::physmm::alloc_page_range( 2, NO_FLAGS ) );
 	EXPECT_EQ( 0xfffffff7, map[0] );
 	EXPECT_EQ( 1         , memory::physmm::free_page_count() );
 
-	EXPECT_EQ( nullptr, memory::physmm::alloc_page_range( 2 ) );
+	EXPECT_EQ( nullptr, memory::physmm::alloc_page_range( 2, NO_FLAGS ) );
 }
 
 TEST( physmm, free_page )

@@ -71,6 +71,8 @@ namespace cache
 
 	void put_object( mem_cache_t cache, void *ptr );
 
+	mem_cache_t get_cache( void *ptr );
+
 	void init( void );
 };
 };

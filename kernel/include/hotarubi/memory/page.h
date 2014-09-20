@@ -19,42 +19,12 @@
 
 *******************************************************************************/
 
-/* basic virtual memory layout definitions */
+/* macros and definitions related to physical page size */
 
-#ifndef __MEMORY_CONST_H
-#define __MEMORY_CONST_H 1
+#ifndef __MEMORY_PAGE_H
+#define __MEMORY_PAGE_H 1
 
-#include <hotarubi/boot/bootmem.h>
-#include <hotarubi/memory/page.h>
-
-namespace memory
-{
-namespace virtmm
-{
-
-	enum VirtualMemoryRangeSet
-	{
-		kVMRangeUserBase    = 0x0000000000000000ULL,
-		kVMRangeUserEnd     = 0x00007fffffffffffULL,
-
-		kVMRangeGuard1Base  = 0xffff800000000000UL,
-		kVMRangeGuard1End   = 0xffff80ffffffffffUL,
-
-		kVMRangePhysMemBase = 0xffff880000000000UL,
-		kVMRangePhysMemEnd  = 0xffffc7ffffffffffUL,
-
-		kVMRangeGuard2Base  = 0xffffc80000000000UL,
-		kVMRangeGuard2End   = 0xffffc8ffffffffffUL,
-
-		kVMRangeHeapBase    = 0xffffc90000000000UL,
-		kVMRangeHeapEnd     = 0xffffe8ffffffffffUL,
-
-		kVMRangeIOMapBase   = 0xffffe90000000000UL,
-		kVMRangeIOMapEnd    = 0xffffe9ffffffffffUL,
-
-		kVMRangeKernelBase  = KERNEL_VMA,
-	};
-};
-};
+#define PAGE_SIZE  0x1000  /* size of one physical page */
+#define PAGE_SHIFT 12      /* number of bytes required to convert page -> index */
 
 #endif

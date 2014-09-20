@@ -25,38 +25,41 @@
 #include <stdint.h>
 #include <bitmask.h>
 
+/* shortcut to access PhysPageFlagSet */
+#define __VPF( x ) kVPFlag ##x
+
 namespace memory
 {
 namespace virtmm
 {
-	enum PageFlagSystemSet : uint64_t
+	enum VirtPageFlagSet : uint64_t
 	{
-		kPageFlagNone         = 0,
-		kPageFlagPresent      = 1 << 0,
-		kPageFlagWritable     = 1 << 1,
-		kPageFlagUser         = 1 << 2,
-		kPageFlagWriteThrough = 1 << 3,
-		kPageFlagCacheDisable = 1 << 4,
-		kPageFlagAccessed     = 1 << 5,
-		kPageFlagDirty        = 1 << 6,
-		kPageFlagSizeExtend   = 1 << 7,
-		kPageFlagGlobal       = 1 << 8,
+		kVPFlagNone         = 0,
+		kVPFlagPresent      = 1 << 0,
+		kVPFlagWritable     = 1 << 1,
+		kVPFlagUser         = 1 << 2,
+		kVPFlagWriteThrough = 1 << 3,
+		kVPFlagCacheDisable = 1 << 4,
+		kVPFlagAccessed     = 1 << 5,
+		kVPFlagDirty        = 1 << 6,
+		kVPFlagSizeExtend   = 1 << 7,
+		kVPFlagGlobal       = 1 << 8,
 
-		kPageFlagCopyOnWrite  = 1 << 9,
-		kPageFlagSparse       = 1 << 10,
-		kPageFlagSwappedOut   = 1 << 11,
+		kVPFlagCopyOnWrite  = 1 << 9,
+		kVPFlagSparse       = 1 << 10,
+		kVPFlagSwappedOut   = 1 << 11,
 
-		kPageFlagNoExecute    = 0x8000000000000000UL,
-		kPageFlagMask         = 0xffe0000000000fffUL,
-		kPageFlagMask2M       = 0xffe00000000fffffUL,
+		kVPFlagNoExecute    = 0x8000000000000000UL,
+		kVPFlagMask         = 0xffe0000000000fffUL,
+		kVPFlagMask2M       = 0xffe00000000fffffUL,
 	};
-	BITMASK( PageFlagSystemSet );
+	BITMASK( VirtPageFlagSet );
 
 	extern const uint64_t map_invalid;
 
-	bool map_address( uint64_t vaddr, PageFlagSystemSet flags );
-	bool map_fixed( uint64_t vaddr, uint64_t paddr, PageFlagSystemSet flags );
-	bool map_address_range( uint64_t vaddr, size_t npages, PageFlagSystemSet flags );
+	bool map_address( uint64_t vaddr, VirtPageFlagSet flags );
+	bool map_fixed( uint64_t vaddr, uint64_t paddr, VirtPageFlagSet flags );
+	bool map_address_range( uint64_t vaddr, size_t npages, VirtPageFlagSet flags );
 
 	void unmap_address( uint64_t vaddr );
 	void unmap_fixed( uint64_t vaddr );
