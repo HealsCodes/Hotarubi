@@ -49,7 +49,7 @@ struct resource
 	LIST_HEAD( children );
 };
 
-static SpinLock mmio_resource_lock;
+static spin_lock mmio_resource_lock;
 static struct resource mmio_mem_root  = { "IO mem", 0, 0xffffffff, kMMIOFlagIOMem, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
 static struct resource mmio_port_root = { "IO ports", 0, 0xffff, kMMIOFlagIOPort, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
 

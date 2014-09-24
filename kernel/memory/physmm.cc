@@ -47,7 +47,7 @@ static uint32_t   *memory_map_data  = nullptr;
 static uint32_t    memory_map_size  = 0;
 static uint32_t    memory_map_used  = 0;
 static uint64_t    memory_map_base  = 0; /* offset applied to physical addresses */
-static SpinLock    memory_map_lock;
+static spin_lock    memory_map_lock;
 uint64_t memory_upper_bound = 0;
 
 static inline bool

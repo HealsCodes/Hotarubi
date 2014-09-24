@@ -42,7 +42,7 @@ namespace processor
 
 LOCAL_DATA_DEF( uint8_t id );
 
-static SpinLock processor_accounting_lock;
+static spin_lock processor_accounting_lock;
 static unsigned processor_active_count = 0;
 
 /* local static allocation for the bootstrap processor */

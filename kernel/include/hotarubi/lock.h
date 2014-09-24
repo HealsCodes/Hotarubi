@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <hotarubi/processor/core.h>
 
-class SpinLock
+class spin_lock
 {
 public:
 	void lock( void )

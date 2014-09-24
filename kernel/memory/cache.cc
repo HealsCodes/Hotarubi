@@ -73,7 +73,7 @@ struct mem_cache
 	LIST_HEAD( obj_map );
 
 	mem_cache_stats_t stats;
-	SpinLock lock;
+	spin_lock lock;
 };
 
 struct slab

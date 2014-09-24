@@ -36,7 +36,7 @@ struct ring_buffer
 {
 	char *data;
 	size_t in, out, len;
-	SpinLock lock;
+	spin_lock lock;
 
 	size_t ( *callback )( void *p, const char *str, size_t n );
 };
