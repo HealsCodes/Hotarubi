@@ -112,6 +112,27 @@ static inline void list_add_tail( struct list_head *head, struct list_head *elem
 	__list_add( elem, head->prev, head );
 };
 
+#define list_add_before( head, elem ) list_add_tail( ( head ), ( elem ) )
+#define list_add_after( head, elem ) list_add( ( head ), ( elem ) )
+
+static inline void list_splice( struct list_head *list, struct list_head *head )
+{
+	if( list->next != list->prev )
+	{
+		struct list_head *first = list->next,
+		                 *last  = list->prev,
+		                 *graft = head->next;
+
+		first->prev = head;
+		head->next  = first;
+		last->next  = graft;
+		graft->prev = last;
+
+		list->next = list;
+		list->prev = list;
+	}
+};
+
 static inline void list_del( struct list_head *elem )
 {
 	__list_del( elem );

@@ -168,6 +168,74 @@ TEST( list, foreach_mutable_reverse )
 	EXPECT_EQ( 1, LIST_TAIL_ENTRY( &test_list, struct list_item, items )->id );
 }
 
+#if 0
+TEST( list, grafting )
+{
+	LIST_HEAD( base_head );
+	LIST_HEAD( nest_head );
+
+	list_item l1 = { .id = 1  },
+	          l2 = { .id = 2  },
+	          l3 = { .id = 3  },
+	          l4 = { .id = 10 },
+	          l5 = { .id = 12 },
+	          l6 = { .id = 13 },
+	          l7 = { .id = 20 },
+	          l8 = { .id = 22 },
+	          l9 = { .id = 23 };
+
+	INIT_LIST( base_head );
+	INIT_LIST( nest_head );
+
+	/* base_head: 1,2,3 */
+	list_add( &base_head, &l3.items );
+	list_add( &base_head, &l2.items );
+	list_add( &base_head, &l1.items );
+
+	/* nest_head: 10,12,13 */
+	list_add( &nest_head, &l6.items );
+	list_add( &nest_head, &l5.items );
+	list_add( &nest_head, &l4.items );
+
+	/* traverse both */
+	fprintf( stdout, "base_head (expect 1,2,3): " );
+	LIST_FOREACH( ptr, &base_head )
+	{
+		fprintf( stdout, "%d ", LIST_ENTRY( ptr, struct list_item, items )->id );
+	}
+	fprintf( stdout, "\nnest_head (expect 10,12,13): " );
+	LIST_FOREACH( ptr, &nest_head )
+	{
+		fprintf( stdout, "%d ", LIST_ENTRY( ptr, struct list_item, items )->id );
+	}
+	fprintf( stdout, "\n" );
+	fflush( stdout );
+
+	/* insert 20,22,23 before l3 */
+	list_add_before( &l3.items, &l7.items );
+	list_add_before( &l3.items, &l8.items );
+	list_add_before( &l3.items, &l9.items );
+
+	fprintf( stdout, "base_head (expect 1,2,20,22,23,3): " );
+	LIST_FOREACH( ptr, &base_head )
+	{
+		fprintf( stdout, "%d ", LIST_ENTRY( ptr, struct list_item, items )->id );
+	}
+	fprintf( stdout, "\n" );
+	fflush( stdout );
+
+	/* splice nest_head after l1 */
+	list_splice( &nest_head, &l1.items );
+	fprintf( stdout, "base_head (expect 1,10,12,13,2,20,22,23,3): " );
+	LIST_FOREACH( ptr, &base_head )
+	{
+		fprintf( stdout, "%d ", LIST_ENTRY( ptr, struct list_item, items )->id );
+	}
+	fprintf( stdout, "\n" );
+	fflush( stdout );
+}
+#endif
+
 /* slist tests */
 
 struct slist_item
