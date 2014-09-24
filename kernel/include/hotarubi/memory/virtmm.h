@@ -26,7 +26,7 @@
 #include <bitmask.h>
 
 /* shortcut to access PhysPageFlagSet */
-#define __VPF( x ) kVPFlag ##x
+#define __VPF( x ) memory::virtmm::kVPFlag ##x
 
 namespace memory
 {
