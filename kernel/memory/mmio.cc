@@ -172,14 +172,14 @@ request_region( const char *name, uintptr_t start, size_t size, MMIOFlagSet flag
 	request->name  = name;
 	request->start = start;
 	request->range = start + size;
-	request->flags = flags;
+	request->flags = flags & ~( kMMIOFlagMapped );
 	request->siblings.prev = nullptr;
 	request->siblings.next = nullptr;
 	INIT_LIST( request->children );
 
 	mmio_resource_lock.lock();
 	resource_t root = ( ( flags & kMMIOFlagIOPort ) ? &mmio_port_root
-	                                                 : &mmio_mem_root );
+	                                                : &mmio_mem_root );
 
 	if( _request_resource( root, request ) != request )
 	{
