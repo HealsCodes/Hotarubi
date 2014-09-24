@@ -90,7 +90,7 @@ _map_region( uint64_t *pml4, uintptr_t vaddr, uintptr_t paddr, size_t len,
 
 	do
 	{
-		pdpt = ( uint64_t* )MMU_PDPT_ADDR( pml4, vaddr );
+		pdpt = ( uint64_t* )VIRT_ADDR( MMU_PDPT_ADDR( pml4, vaddr ) );
 		if( pdpt == nullptr )
 		{
 			if( ( pdpt = ( uint64_t* )physmm::alloc_page( __PPF( Locked ) ) ) == nullptr )
@@ -101,7 +101,7 @@ _map_region( uint64_t *pml4, uintptr_t vaddr, uintptr_t paddr, size_t len,
 			pml4[MMU_PML4_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdpt ) | kVPFlagPresent;
 		}
 
-		pdt = ( uint64_t* )MMU_PDT_ADDR( pdpt, vaddr );
+		pdt = ( uint64_t* )VIRT_ADDR( MMU_PDT_ADDR( pdpt, vaddr ) );
 		if( pdt == nullptr )
 		{
 			if( ( pdt = ( uint64_t* )physmm::alloc_page( __PPF( Locked ) ) ) == nullptr )
@@ -112,7 +112,7 @@ _map_region( uint64_t *pml4, uintptr_t vaddr, uintptr_t paddr, size_t len,
 			pdpt[MMU_PDPT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdt ) | kVPFlagPresent;
 		}
 
-		pt = ( uint64_t* )MMU_PT_ADDR( pdt, vaddr );
+		pt = ( uint64_t* )VIRT_ADDR( MMU_PT_ADDR( pdt, vaddr ) );
 		if( pt == nullptr )
 		{
 			if( ( pt = ( uint64_t* )physmm::alloc_page( __PPF( Locked ) ) ) == nullptr )
