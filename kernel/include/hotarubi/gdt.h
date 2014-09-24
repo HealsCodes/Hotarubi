@@ -65,7 +65,7 @@ namespace gdt
 		kGDTOpSize32Bit        = 0x00,
 		kGDTOpSize64Bit        = 0x02,
 	};
-	BITMASK( GDTSizeFlagsSet )
+	BITMASK( GDTSizeFlagsSet );
 
 	#pragma pack( push, 1 )
 
