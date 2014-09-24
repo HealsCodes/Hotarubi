@@ -19,27 +19,42 @@
 
 *******************************************************************************/
 
-#ifndef __MEMORY_H
-#define __MEMORY_H 1
+/* IO-Memory resource management */
 
-#include <hotarubi/memory/physmm.h>
-#include <hotarubi/memory/virtmm.h>
-#include <hotarubi/memory/cache.h>
-#include <hotarubi/memory/const.h>
-#include <hotarubi/memory/kmalloc.h>
-#include <hotarubi/memory/mmio.h>
+#ifndef _MEMORY_MMIO_H
+#define _MEMORY_MMIO_H 1
+
+#include <stdint.h>
+#include <stddef.h>
+#include <bitmask.h>
 
 namespace memory
 {
-	inline void init( struct multiboot_info *multiboot_info )
+namespace mmio
+{
+	enum MMIOFlagSet
 	{
-		/* make sure these are called in correct order */
-		physmm::init( multiboot_info );
-		virtmm::init();
-		cache::init();
-		kmalloc::init();
-        mmio::init();
+		kMMIOFlagBusy    = ( 1 << 0 ),
+		kMMIOFlagMapped  = ( 1 << 5 ),
+		/* type flags */
+		kMMIOFlagIOPort  = ( 1 << 6 ),
+		kMMIOFlagIOMem   = ( 1 << 7 ),
 	};
+	BITMASK( MMIOFlagSet );
+
+	typedef struct resource *resource_t;
+
+	resource_t request_region( const char *name, uintptr_t start, size_t size, 
+	                           MMIOFlagSet flags );
+
+	void release_region( resource_t *region );
+
+	/* FIXME: there is no deactivate_region so it will stay mapped even after
+	 *        being released.. */
+	uintptr_t activate_region( resource_t region );
+
+	void init( void );
+};
 };
 
 #endif

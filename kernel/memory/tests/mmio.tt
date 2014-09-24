@@ -1,0 +1,254 @@
+/*******************************************************************************
+
+    Copyright (C) 2014  René 'Shirk' Köcher
+ 
+    This file is part of Hotarubi.
+
+    Hotarubi is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+ 
+    Hotarubi is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+ 
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*******************************************************************************/
+
+/* Stuff! */
+
+#include "gtest/gtest.h"
+#include "../mmio.cc"
+
+using namespace memory::mmio;
+
+void
+print_resource_tree( resource_t root, int depth=1 )
+{
+#ifdef MMIO_TEST_VERBOSE
+	fprintf( stdout, "%*s::%s { %08lx -> %08lx }\n", depth, "", root->name, root->start, root->range );
+	LIST_FOREACH( ptr, &root->children )
+	{
+		print_resource_tree( LIST_ENTRY( ptr, struct resource, siblings ), depth + 2 );
+	}
+	fflush( stdout );
+#endif
+}
+
+TEST(mmio, empty)
+{
+	init();
+
+	EXPECT_TRUE( list_empty( &mmio_root.children ) );
+}
+
+TEST(mmio, request_valid)
+{
+	init();
+
+	resource_t res = request_region( "res", 0, 0xffffffff, kMMIOFlagBusy );
+
+	print_resource_tree( &mmio_root );
+	EXPECT_TRUE( res != nullptr );
+	EXPECT_EQ( 0x00000000   , res->start );
+	EXPECT_EQ( 0xffffffff   , res->range );
+	EXPECT_EQ( kMMIOFlagBusy, res->flags );
+	EXPECT_EQ( &mmio_root   , res->parent );
+	EXPECT_TRUE( list_empty( &res->children ) );
+}
+
+TEST(mmio, request_valid_nested )
+{
+	init();
+
+	resource_t res = request_region( "res", 0, 0xffffffff, kMMIOFlagIOMem );
+
+	print_resource_tree( &mmio_root );
+	EXPECT_TRUE( res != nullptr );
+	EXPECT_EQ( 0x00000000    , res->start );
+	EXPECT_EQ( 0xffffffff    , res->range );
+	EXPECT_EQ( kMMIOFlagIOMem, res->flags );
+	EXPECT_EQ( &mmio_root    , res->parent );
+	EXPECT_TRUE( list_empty( &res->children ) );
+	EXPECT_FALSE( list_empty( &mmio_root.children ) );
+
+	resource_t res2 = request_region( "res2", 0, 0xffffffff, kMMIOFlagBusy );
+	print_resource_tree( &mmio_root );
+
+	EXPECT_TRUE( res2 != nullptr );
+	EXPECT_EQ( 0x00000000   , res2->start );
+	EXPECT_EQ( 0xffffffff   , res2->range );
+	EXPECT_EQ( kMMIOFlagBusy, res2->flags );
+	EXPECT_EQ( res          , res2->parent );
+	EXPECT_TRUE( list_empty( &res2->children ) );
+	EXPECT_FALSE( list_empty( &res->children ) );
+}
+
+TEST(mmio, request_valid_sibling )
+{
+	init();
+
+	resource_t res = request_region( "res", 0, 0x7fffffff, kMMIOFlagIOMem );
+
+	print_resource_tree( &mmio_root );
+	EXPECT_TRUE( res != nullptr );
+	EXPECT_EQ( 0x00000000    , res->start );
+	EXPECT_EQ( 0x7fffffff    , res->range );
+	EXPECT_EQ( kMMIOFlagIOMem, res->flags );
+	EXPECT_EQ( &mmio_root    , res->parent );
+	EXPECT_TRUE( list_empty( &res->children ) );
+	EXPECT_FALSE( list_empty( &mmio_root.children ) );
+
+	resource_t res2 = request_region( "res2", 0x80000000, 0x10000000, kMMIOFlagBusy );
+	print_resource_tree( &mmio_root );
+
+	EXPECT_TRUE( res2 != nullptr );
+	EXPECT_EQ( 0x80000000   , res2->start );
+	EXPECT_EQ( 0x90000000   , res2->range );
+	EXPECT_EQ( kMMIOFlagBusy, res2->flags );
+	EXPECT_EQ( &mmio_root   , res2->parent );
+	EXPECT_TRUE( list_empty( &res2->children ) );
+	EXPECT_TRUE( list_empty( &res->children ) );
+}
+
+TEST(mmio, request_valid_nested_sibling )
+{
+	init();
+
+	resource_t res = request_region( "res", 0, 0x7fffffff, kMMIOFlagIOMem );
+
+	print_resource_tree( &mmio_root );
+	EXPECT_TRUE( res != nullptr );
+	EXPECT_EQ( 0x00000000    , res->start );
+	EXPECT_EQ( 0x7fffffff    , res->range );
+	EXPECT_EQ( kMMIOFlagIOMem, res->flags );
+	EXPECT_EQ( &mmio_root    , res->parent );
+	EXPECT_TRUE( list_empty( &res->children ) );
+	EXPECT_FALSE( list_empty( &mmio_root.children ) );
+
+	resource_t res2 = request_region( "res2", 0x0, 0x70000000, kMMIOFlagIOMem );
+	print_resource_tree( &mmio_root );
+
+	EXPECT_TRUE( res2 != nullptr );
+	EXPECT_EQ( 0x00000000    , res2->start );
+	EXPECT_EQ( 0x70000000    , res2->range );
+	EXPECT_EQ( kMMIOFlagIOMem, res2->flags );
+	EXPECT_EQ( res           , res2->parent );
+	EXPECT_TRUE( list_empty( &res2->children ) );
+	EXPECT_FALSE( list_empty( &res->children ) );
+
+	resource_t res3 = request_region( "res3", 0x70000001, 0x01000000, kMMIOFlagBusy );
+	print_resource_tree( &mmio_root );
+
+	EXPECT_TRUE( res3 != nullptr );
+	EXPECT_EQ( 0x70000001   , res3->start );
+	EXPECT_EQ( 0x71000001   , res3->range );
+	EXPECT_EQ( kMMIOFlagBusy, res3->flags );
+	EXPECT_EQ( res          , res3->parent );
+	EXPECT_TRUE( list_empty( &res3->children ) );
+	EXPECT_TRUE( list_empty( &res2->children ) );
+}
+
+TEST(mmio, request_invalid)
+{
+	init();
+
+	resource_t res = request_region( "res", 0, 0xfffffffff, kMMIOFlagBusy );
+
+	print_resource_tree( &mmio_root );
+	EXPECT_TRUE( res == nullptr );
+	EXPECT_TRUE( list_empty( &mmio_root.children ) );
+}
+
+TEST(mmio, request_invalid_nested )
+{
+	init();
+
+	resource_t res = request_region( "res", 0, 0xffffffff, kMMIOFlagBusy );
+
+	print_resource_tree( &mmio_root );
+	EXPECT_TRUE( res != nullptr );
+	EXPECT_EQ( 0x00000000    , res->start );
+	EXPECT_EQ( 0xffffffff    , res->range );
+	EXPECT_EQ( kMMIOFlagBusy , res->flags );
+	EXPECT_EQ( &mmio_root    , res->parent );
+	EXPECT_TRUE( list_empty( &res->children ) );
+	EXPECT_FALSE( list_empty( &mmio_root.children ) );
+
+	resource_t res2 = request_region( "res2", 0, 0xffffffff, kMMIOFlagBusy );
+	print_resource_tree( &mmio_root );
+
+	EXPECT_TRUE( res2 == nullptr );
+	EXPECT_TRUE( list_empty( &res->children ) );
+	EXPECT_FALSE( list_empty( &mmio_root.children ) );
+}
+
+TEST(mmio, request_invalid_sibling )
+{
+	init();
+
+	resource_t res = request_region( "res", 0, 0x7fffffff, kMMIOFlagBusy );
+
+	print_resource_tree( &mmio_root );
+	EXPECT_TRUE( res != nullptr );
+	EXPECT_EQ( 0x00000000    , res->start );
+	EXPECT_EQ( 0x7fffffff    , res->range );
+	EXPECT_EQ( kMMIOFlagBusy , res->flags );
+	EXPECT_EQ( &mmio_root    , res->parent );
+	EXPECT_TRUE( list_empty( &res->children ) );
+	EXPECT_FALSE( list_empty( &mmio_root.children ) );
+
+	resource_t res2 = request_region( "res2", 0x7ffffffe, 0x10000000, kMMIOFlagBusy );
+	print_resource_tree( &mmio_root );
+
+	EXPECT_TRUE( res2 == nullptr );
+	EXPECT_TRUE( list_empty( &res->children ) );
+}
+
+TEST(mmio, release_nested_sibling )
+{
+	init();
+
+	resource_t res = request_region( "res", 0, 0x7fffffff, kMMIOFlagIOMem );
+
+	print_resource_tree( &mmio_root );
+	EXPECT_TRUE( res != nullptr );
+	EXPECT_EQ( 0x00000000    , res->start );
+	EXPECT_EQ( 0x7fffffff    , res->range );
+	EXPECT_EQ( kMMIOFlagIOMem, res->flags );
+	EXPECT_EQ( &mmio_root    , res->parent );
+	EXPECT_TRUE( list_empty( &res->children ) );
+	EXPECT_FALSE( list_empty( &mmio_root.children ) );
+
+	resource_t res2 = request_region( "res2", 0x0, 0x70000000, kMMIOFlagIOMem );
+	print_resource_tree( &mmio_root );
+
+	EXPECT_TRUE( res2 != nullptr );
+	EXPECT_EQ( 0x00000000    , res2->start );
+	EXPECT_EQ( 0x70000000    , res2->range );
+	EXPECT_EQ( kMMIOFlagIOMem, res2->flags );
+	EXPECT_EQ( res           , res2->parent );
+	EXPECT_TRUE( list_empty( &res2->children ) );
+	EXPECT_FALSE( list_empty( &res->children ) );
+
+	resource_t res3 = request_region( "res3", 0x70000001, 0x01000000, kMMIOFlagBusy );
+	print_resource_tree( &mmio_root );
+
+	EXPECT_TRUE( res3 != nullptr );
+	EXPECT_EQ( 0x70000001   , res3->start );
+	EXPECT_EQ( 0x71000001   , res3->range );
+	EXPECT_EQ( kMMIOFlagBusy, res3->flags );
+	EXPECT_EQ( res          , res3->parent );
+	EXPECT_TRUE( list_empty( &res3->children ) );
+	EXPECT_TRUE( list_empty( &res2->children ) );
+
+	release_region( &res );
+	print_resource_tree( &mmio_root );
+
+	EXPECT_EQ( &mmio_root, res2->parent );
+	EXPECT_EQ( &mmio_root, res3->parent );
+}
