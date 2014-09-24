@@ -53,17 +53,17 @@ class BitOps
 		return ( T )( ~( uintptr_t )a ); 
 	};
 
-	friend constexpr T& operator &=( T &a, T b )
+	friend T& operator &=( T &a, T b )
 	{ 
 		a = a & b; return a; 
 	};
 
-	friend constexpr T& operator |=( T &a, T b )
+	friend T& operator |=( T &a, T b )
 	{ 
 		a = a | b; return a;
 	};
 
-	friend constexpr T& operator ^=( T &a, T b )
+	friend T& operator ^=( T &a, T b )
 	{ 
 		a = a ^ b; return a;
 	};
