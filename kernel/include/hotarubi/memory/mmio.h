@@ -28,6 +28,8 @@
 #include <stddef.h>
 #include <bitmask.h>
 
+#define __MMIO( x ) memory::mmio::kMMIOFlag ##x
+
 namespace memory
 {
 namespace mmio
