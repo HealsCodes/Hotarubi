@@ -225,7 +225,7 @@ init( const multiboot_info_t *boot_info )
 			}
 			mem_available += mem_map->len;
 		}
-
+		memory_upper_bound = mem_map->addr + mem_map->len;
 		/*
 		* #define E820_RAM	1
 		* #define E820_RESERVED	2
@@ -242,7 +242,9 @@ init( const multiboot_info_t *boot_info )
 	} while( ( uintptr_t)mem_map < boot_info->mmap_addr + boot_info->mmap_length );
 
 	memory_map_size = last_chunk_end / PAGE_SIZE / 8;
-	memory_upper_bound = last_chunk_end;
+	/* memory_upper_bound should be the end of the physical address space
+	 * the line below makes it the last *usable* physical memory. */
+	/* memory_upper_bound = last_chunk_end; */
 
 	if( last_chunk_end < 0x1000000 )
 	{
