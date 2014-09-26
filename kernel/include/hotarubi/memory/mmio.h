@@ -37,6 +37,7 @@ namespace mmio
 	enum MMIOFlagSet
 	{
 		kMMIOFlagBusy    = ( 1 << 0 ),
+		kMMIOFlagShared  = ( 1 << 4 ),
 		kMMIOFlagMapped  = ( 1 << 5 ),
 		/* type flags */
 		kMMIOFlagIOPort  = ( 1 << 6 ),

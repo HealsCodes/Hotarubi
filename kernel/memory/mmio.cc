@@ -42,6 +42,7 @@ struct resource
 	uintptr_t range;
 
 	MMIOFlagSet flags;
+	unsigned  refcount;
 
 	struct resource *parent;
 
@@ -50,8 +51,8 @@ struct resource
 };
 
 static spin_lock mmio_resource_lock;
-static struct resource mmio_mem_root  = { "IO mem", 0, 0xffffffff, kMMIOFlagIOMem, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
-static struct resource mmio_port_root = { "IO ports", 0, 0xffff, kMMIOFlagIOPort, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
+static struct resource mmio_mem_root  = { "IO mem", 0, 0xffffffff, kMMIOFlagIOMem, 1, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
+static struct resource mmio_port_root = { "IO ports", 0, 0xffff, kMMIOFlagIOPort, 1, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
 
 static resource_t
 _check_resource( resource_t root, uintptr_t start, uintptr_t range )
@@ -69,6 +70,25 @@ _check_resource( resource_t root, uintptr_t start, uintptr_t range )
 	{
 		resource_t child = LIST_ENTRY( ptr, struct resource, siblings );
 		if( _check_resource( child, start, range ) != nullptr )
+		{
+			return child;
+		}
+	}
+	return nullptr;
+}
+
+static resource_t
+_find_shared( resource_t root, uintptr_t start, uintptr_t range )
+{
+	if( start == root->start && range == root->range && root->flags & kMMIOFlagShared )
+	{
+		return root;
+	}
+	/* check for matching children children */
+	LIST_FOREACH( ptr, &root->children )
+	{
+		resource_t child = LIST_ENTRY( ptr, struct resource, siblings );
+		if( _find_shared( child, start, range ) != nullptr )
 		{
 			return child;
 		}
@@ -153,40 +173,61 @@ _release_resource( resource_t region )
 		return;
 	}
 
-	if( list_empty( &region->siblings ) == false )
+	if( region->refcount < 2 )
 	{
-		LIST_FOREACH( ptr, &region->children )
+		if( list_empty( &region->siblings ) == false )
 		{
-			LIST_ENTRY( ptr, struct resource, siblings )->parent = region->parent;
+			LIST_FOREACH( ptr, &region->children )
+			{
+				LIST_ENTRY( ptr, struct resource, siblings )->parent = region->parent;
+			}
+			list_splice( &region->children, &region->siblings );
 		}
-		list_splice( &region->children, &region->siblings );
+		list_del( &region->siblings );
+		region->refcount = 0;
 	}
-	list_del( &region->siblings );
+	else
+	{
+		--region->refcount;
+	}
 }
 
 resource_t
 request_region( const char *name, uintptr_t start, size_t size, MMIOFlagSet flags )
 {
-	resource_t request = new struct resource;
-
-	request->name  = name;
-	request->start = start;
-	request->range = start + size;
-	request->flags = flags & ~( kMMIOFlagMapped );
-	request->siblings.prev = nullptr;
-	request->siblings.next = nullptr;
-	INIT_LIST( request->children );
-
-	mmio_resource_lock.lock();
+	resource_t request = nullptr;
 	resource_t root = ( ( flags & kMMIOFlagIOPort ) ? &mmio_port_root
 	                                                : &mmio_mem_root );
-
-	if( _request_resource( root, request ) != request )
+	if( flags & kMMIOFlagShared )
 	{
-		delete request;
-		request = nullptr;
+		mmio_resource_lock.lock();
+		if( ( request = _find_shared( root, start, start + size ) ) != nullptr )
+		{
+			++request->refcount;
+		}
+		mmio_resource_lock.unlock();
 	}
-	mmio_resource_lock.unlock();
+	if( request == nullptr )
+	{
+		request = new struct resource;
+
+		request->name  = name;
+		request->start = start;
+		request->range = start + size;
+		request->flags = flags & ~( kMMIOFlagMapped );
+		request->refcount = 1;
+		request->siblings.prev = nullptr;
+		request->siblings.next = nullptr;
+		INIT_LIST( request->children );
+
+		mmio_resource_lock.lock();
+		if( _request_resource( root, request ) != request )
+		{
+			delete request;
+			request = nullptr;
+		}
+		mmio_resource_lock.unlock();
+	}
 	return request;
 }
 
@@ -195,8 +236,11 @@ release_region( resource_t *region )
 {
 	mmio_resource_lock.lock();
 	_release_resource( *region );
-	delete *region;
-	*region = nullptr;
+	if( ( *region )->refcount == 0 )
+	{
+		delete *region;
+		*region = nullptr;
+	}
 	mmio_resource_lock.unlock();
 }
 
