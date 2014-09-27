@@ -44,6 +44,7 @@ kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
 	log::printk( "loader data : %p\n", multiboot_info );
 
 	memory::init( multiboot_info );
+
 	processor::init();
 
 	__UNDER_CONSTRUCTION__;
@@ -53,9 +54,9 @@ extern "C" void
 kernel_ap_entry( void )
 {
 	/* This is executed by application processors */
-	processor::init();
+	memory::init_ap();
 
-	memory::virtmm::init_ap();
+	processor::init();
 
 	__UNDER_CONSTRUCTION__;
 }
