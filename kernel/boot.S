@@ -189,11 +189,11 @@ L_jump_to_64:
 	mov dword ptr[_BSP], 0
 
 	lea rax, kernel_entry
-	jmp rax
+	call rax
 
 L_use_ap_entry:
 	lea rax, kernel_ap_entry
-	jmp rax
+	call rax
 
 1:
 	hlt
