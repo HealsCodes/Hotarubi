@@ -40,6 +40,11 @@ namespace memory
 		kmalloc::init();
         mmio::init();
 	};
+
+    inline void init_ap( void )
+    {
+        virtmm::init_ap();
+    };
 };
 
 #endif
