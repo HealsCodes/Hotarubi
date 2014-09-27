@@ -67,8 +67,6 @@ namespace gdt
 	};
 	BITMASK( GDTSizeFlagsSet );
 
-	#pragma pack( push, 1 )
-
 	/* basic descriptor used in 32- and 64bit modes */
 	struct gdt_descriptor
 	{
@@ -95,14 +93,13 @@ namespace gdt
 		uint32_t reserved_0;
 	};
 
+	#pragma pack( push, 1 )
 	struct gdt_pointer
 	{
 		uint16_t limit;
 		uint64_t address;
 	};
-
 	#pragma pack( pop )
-
 	void init( void );
 };
 

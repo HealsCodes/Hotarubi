@@ -30,7 +30,6 @@
 namespace tss
 {
 	#pragma pack( push, 1 )
-
 	struct tss
 	{
 		uint32_t _reserved_0;
@@ -43,7 +42,6 @@ namespace tss
 		uint16_t _reserved_3;
 		uint16_t io_map_base;
 	};
-
 	#pragma pack( pop )
 
 	void init( void );
