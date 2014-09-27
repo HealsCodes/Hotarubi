@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <hotarubi/processor/core.h>
+#include <hotarubi/io.h>
 
 class spin_lock
 {
@@ -52,7 +53,7 @@ public:
 	}
 
 private:
-	uint8_t _isr_state = 0;
+	bool    _isr_state = 0;
 	uint8_t _lock = 0;
 };
 
