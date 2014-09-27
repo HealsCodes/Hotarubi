@@ -28,12 +28,14 @@
 #define __PROCESSOR_LOCAL_DATA_H 1
 
 #include <stdint.h>
+
 <% for @header in @includes %>
 <%= "#include <#{@header}>\n" %>
 <% end %>
 
 namespace processor
 {
+    #pragma pack( push, 1 )
 	struct local_data
 	{
 		/* _gs_self is used to get a pointer to this struct by accessing %gs:0 */
@@ -43,6 +45,8 @@ namespace processor
 		<%= "#{@member};" %>
 <% end %>
 	};
+    #pragma pack( pop )
+
 	static_assert( offsetof( struct local_data, _gs_self ) == 0,
 	               "_gs_self must be located at offset 0 in struct local_data.");
 };
