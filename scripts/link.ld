@@ -36,12 +36,13 @@ SECTIONS {
 
 		KEEP (*(.init))
 		KEEP (*(.fini))
-		KEEP (*(SORT(.ctors.*)))
-		KEEP (*(SORT(.dtors.*)))
+		KEEP (*(SORT(.ctors*)))
+		KEEP (*(SORT(.dtors*)))
 
-		*(.text* .gnu.linkonce.t*)
-		*(.text.* )
-		*(.rodata* .gnu.linkonce.r*)
+		*(.text*)
+		*(.gnu.linkonce.t*)
+		*(.rodata*)
+		*(.gnu.linkonce.r*)
 
 		__etext = .;
 	}
@@ -49,22 +50,25 @@ SECTIONS {
 		__data = .;
 		*(EXCLUDE_FILE(kernel/boot.o) .data)
 
-		*(.data* .gnu.linkonce.d*)
+		*(.data*)
+		*(.gnu.linkonce.d*)
 		
 		__edata = .;
 	}
 	.bss  ALIGN(4096) : AT(ADDR(.bss) - KERNEL_VMA) {
 		__bss = .;
-		
-		/* reserve some additional space for bootstrap stack */
-		__boot_stack_end = .;
-		. = . + 4096;
-		__boot_stack_top = .;
-
 		*(EXCLUDE_FILE(kernel/boot.o) .bss)
 
-		*(.bss* .gnu.linkonce.b*)
-		*(COMMON*)
+		*(.bss)
+		*(.gnu.linkonce.b*)
+		*(COMMON)
+
+		/* reserve some additional space for bootstrap stack */
+		. = ALIGN(16);
+		__boot_stack_end = .;
+		. = . + 8192;
+		__boot_stack_top = .;
+		. = ALIGN(16);
 
 		__ebss = .;
 		__bootpages = .;
@@ -84,12 +88,16 @@ SECTIONS {
 	__end = .;
 
 	/DISCARD/ : {
-		*(.note*)
+		*(.note)
 		*(.comment)
-		*(.group*)
-		*(.eh_frame*)
-		*(.jcr*)
+		*(.group)
+		*(.eh_frame)
+		*(.jcr)
 		*(.gnu_debuglink)
+		/* these are only present in crt*-kernel.o */
+		*(.rela*)
+		*(.igot*)
+		*(.iplt*)
 	}
 
 	/* provide relocated symbols to kernel / bootstrap */
