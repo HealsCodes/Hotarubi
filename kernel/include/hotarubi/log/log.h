@@ -29,7 +29,7 @@
 #define __UNDER_CONSTRUCTION__ do { \
     	log::printk( "\n\n-- reached under construction area in %s:%d, idling --\n ", \
     	             __FILE__, __LINE__ ); \
-    	for( ; ; ); \
+    	for( ; ; ){ __asm__ __volatile__( "hlt" ); }; \
     } while( 0 )
 
 namespace log
