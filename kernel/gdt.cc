@@ -28,13 +28,16 @@
 #include <hotarubi/macros.h>
 
 LOCAL_DATA_INC( hotarubi/gdt.h );
-LOCAL_DATA_DEF( struct gdt::gdt_pointer    gdtr );
+
 LOCAL_DATA_DEF( struct gdt::gdt_descriptor gdt[GDT_DESCRIPTOR_COUNT] );
 
 #define IA32_GS_BASE 0xc0000101
 
 namespace gdt
 {
+
+static struct gdt_pointer    gdtr;
+
 static void
 _setup_descriptor( struct gdt_descriptor *gdt,
                    unsigned index, uintptr_t base, uint32_t limit,
@@ -96,7 +99,6 @@ init( void )
 {
 	struct processor::local_data *local_data = processor::local_data();
 	struct gdt_descriptor *gdt = local_data->gdt;
-	struct gdt_pointer   *gdtr = &local_data->gdtr;
 
 	memset( gdt, 0, sizeof( struct gdt_descriptor ) * GDT_DESCRIPTOR_COUNT );
 
@@ -110,13 +112,13 @@ init( void )
 
 	_setup_tss_descriptor( gdt, 5, local_data->tss );
 
-	memset( gdtr, 0, sizeof( struct gdt_pointer ) );
+	memset( &gdtr, 0, sizeof( struct gdt_pointer ) );
 
-	gdtr->limit   = sizeof( struct gdt_descriptor ) * GDT_DESCRIPTOR_COUNT - 1;
-	gdtr->address = ( uintptr_t )gdt;
+	gdtr.limit   = sizeof( struct gdt_descriptor ) * GDT_DESCRIPTOR_COUNT - 1;
+	gdtr.address = ( uintptr_t )gdt;
 
 	/* reload the GDT */
-	__asm__ __volatile__( "lgdt (%0)" :: "r"( gdtr ) );
+	__asm__ __volatile__( "lgdt (%0)" :: "r"( &gdtr ) );
 	
 	/* update data segments (but keep GS.base) */
 	__asm__ __volatile__(
