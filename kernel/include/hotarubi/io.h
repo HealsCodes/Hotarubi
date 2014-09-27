@@ -28,6 +28,10 @@
 
 namespace io
 {
+	inline void wait( void )
+	{
+		__asm__ __volatile__( "outb %%al, $0x80" :: "a"( 0 ) );
+	};
 
 	inline void outb( unsigned char val, unsigned short port )
 	{
