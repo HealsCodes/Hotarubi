@@ -25,6 +25,7 @@
 #define __PROCESSOR_CORE_H 1
 
 #include <stdint.h>
+#include <hotarubi/processor/interrupt.h>
 
 namespace processor
 {
@@ -65,7 +66,12 @@ namespace processor
 		return data;
 	}
 
+	struct local_data* core_data( unsigned core );
+
 	bool is_bsp( void );
+
+	struct interrupt *irqs( void );
+	bool set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity );
 };
 
 #endif
