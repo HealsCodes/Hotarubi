@@ -113,7 +113,7 @@ _add_nested( resource_t root, resource_t child )
 			if( sibling->start > child->start )
 			{
 				list_add_before( &sibling->siblings, &child->siblings );
-				child->parent = sibling->parent;
+				child->parent = root->parent;
 				return true;
 			}
 		}
@@ -214,7 +214,11 @@ request_region( const char *name, uintptr_t start, size_t size, MMIOFlagSet flag
 		request->name  = name;
 		request->start = start;
 		request->range = start + size;
+#ifdef KERNEL
 		request->flags = flags & ~( kMMIOFlagMapped );
+#else
+		request->flags = flags;
+#endif
 		request->refcount = 1;
 		request->siblings.prev = nullptr;
 		request->siblings.next = nullptr;
