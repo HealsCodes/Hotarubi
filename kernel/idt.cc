@@ -26,6 +26,7 @@
 #include <bitmask.h>
 
 #include <hotarubi/idt.h>
+#include <hotarubi/lock.h>
 #include <hotarubi/log/log.h>
 #include <hotarubi/processor/core.h>
 
@@ -99,6 +100,8 @@ static struct idt_pointer    idtr;
 /* offsets used when patching dynamic stubs */
 static size_t patch_index = 0, patch_jump = 0;
 
+static spin_lock patch_handler_lock, patch_system_lock;
+
 static void
 _default_irq_stub( irq_stack_frame_t &stack )
 {
@@ -167,6 +170,8 @@ _detect_patch_offsets( void )
 bool
 register_system_handler( unsigned index, irq_handler_fn fn )
 {
+	scoped_lock lock( patch_system_lock );
+
 	if( index <= IDT_RESERVED )
 	{
 		if( _interrupt_pointer_table[index] == 0 ||
@@ -182,6 +187,8 @@ register_system_handler( unsigned index, irq_handler_fn fn )
 bool
 register_irq_handler( unsigned &index, irq_handler_fn fn, bool swapgs_fast )
 {
+	scoped_lock lock( patch_handler_lock);
+
 	auto stub = ( uint8_t* )( ( uintptr_t )_interrupt_stub_base );
 	auto size = _interrupt_stub_size / ( IDT_DESCRIPTORS - IDT_RESERVED );
 
@@ -220,6 +227,8 @@ register_irq_handler( unsigned &index, irq_handler_fn fn, bool swapgs_fast )
 void
 release_irq_handler( unsigned index )
 {
+	scoped_lock lock( patch_handler_lock);
+
 	if( index <= IDT_RESERVED || index > IDT_DESCRIPTORS )
 	{
 		return;
