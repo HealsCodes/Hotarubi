@@ -68,7 +68,10 @@ namespace idt
 
 	typedef void ( *irq_handler_fn )( irq_stack_frame_t &stack_frame );
 
-	bool register_irq_handler( unsigned index, irq_handler_fn fn );
+	bool register_system_handler( unsigned index, irq_handler_fn fn );
+	bool register_irq_handler( unsigned &index, irq_handler_fn fn, bool swapgs_fast=true );
+	void release_irq_handler( unsigned index );
+
 	void init( void );
 };
 

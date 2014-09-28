@@ -29,11 +29,20 @@
 #include <hotarubi/log/log.h>
 #include <hotarubi/processor/core.h>
 
-#define IDT_DESCRIPTORS 49
+#define IDT_DESCRIPTORS 255
+#define IDT_RESERVED    32
+
+#define IDT_STUB_NR_MAGIC  0xdeadbeef
+#define IDT_STUB_FN_SLOWGS ( (uint32_t)( ( uintptr_t )L_interrupt_swapgs_fast ) & 0xffffffff )
+#define IDT_STUB_FN_FASTGS ( (uint32_t)( ( uintptr_t )L_interrupt_swapgs_slow ) & 0xffffffff )
 
 /* the following are declared in interrupts.S */
 extern "C" uint8_t _interrupt_stub_0[] , _interrupt_stub_1[];
 extern "C" uintptr_t _interrupt_pointer_table[IDT_DESCRIPTORS];
+
+extern "C" uint8_t _interrupt_stub_base[];
+extern "C" uint64_t _interrupt_stub_size;
+extern "C" uint8_t L_interrupt_swapgs_fast[], L_interrupt_swapgs_slow[];
 
 namespace idt
 {
@@ -87,6 +96,9 @@ struct idt_pointer
 static struct idt_descriptor idt[IDT_DESCRIPTORS];
 static struct idt_pointer    idtr;
 
+/* offsets used when patching dynamic stubs */
+static size_t patch_index = 0, patch_jump = 0;
+
 static void
 _default_irq_stub( irq_stack_frame_t &stack )
 {
@@ -130,10 +142,32 @@ _setup_idt_descriptor( struct idt_descriptor *idt, unsigned index,
 	descr->ist       = stack;
 }
 
-bool
-register_irq_handler( unsigned index, irq_handler_fn fn )
+static bool
+_detect_patch_offsets( void )
 {
-	if( index <= IDT_DESCRIPTORS )
+	auto stub = ( uint8_t* )( ( uintptr_t )_interrupt_stub_base );
+	auto size = _interrupt_stub_size / ( IDT_DESCRIPTORS - IDT_RESERVED );
+
+	for( size_t i = 0; i < size; ++i )
+	{
+		uint32_t *magic = ( uint32_t* )&stub[i];
+		if( *magic == IDT_STUB_NR_MAGIC )
+		{
+			patch_index = i;
+		}
+		else if( *magic == IDT_STUB_FN_SLOWGS ||
+		         *magic == IDT_STUB_FN_FASTGS )
+		{
+			patch_jump = i;
+		}
+	}
+	return ( patch_index > 0 && patch_jump > 0 );
+}
+
+bool
+register_system_handler( unsigned index, irq_handler_fn fn )
+{
+	if( index <= IDT_RESERVED )
 	{
 		if( _interrupt_pointer_table[index] == 0 ||
 			_interrupt_pointer_table[index] == ( uintptr_t )_default_irq_stub )
@@ -143,6 +177,65 @@ register_irq_handler( unsigned index, irq_handler_fn fn )
 		}
 	}
 	return false;
+}
+
+bool
+register_irq_handler( unsigned &index, irq_handler_fn fn, bool swapgs_fast )
+{
+	auto stub = ( uint8_t* )( ( uintptr_t )_interrupt_stub_base );
+	auto size = _interrupt_stub_size / ( IDT_DESCRIPTORS - IDT_RESERVED );
+
+	for( auto i = 1; i < IDT_DESCRIPTORS - IDT_RESERVED; ++i )
+	{
+		auto nr      = ( uint32_t* )&stub[patch_index];
+		auto handler = ( uint32_t* )&stub[patch_jump];
+
+		if( *nr == IDT_STUB_NR_MAGIC )
+		{
+			*nr = IDT_RESERVED + i;
+			if( swapgs_fast )
+			{
+				*handler = IDT_STUB_FN_FASTGS;
+			}
+			else
+			{
+				*handler = IDT_STUB_FN_SLOWGS;
+			}
+
+			_interrupt_pointer_table[IDT_RESERVED + i] = ( uintptr_t )fn;
+			_setup_idt_descriptor( idt, IDT_RESERVED + i, 
+			                       ( uintptr_t )stub,
+			                       0x08, 
+			                       kIDTStackNone,
+			                       kIDTTypeIRQ | kIDTPresent | kIDTAccessSys );
+
+			index = IDT_RESERVED + i;
+			return true;
+		}
+		stub = ( uint8_t* )( ( uintptr_t )stub + size );
+	}
+	return false;
+}
+
+void
+release_irq_handler( unsigned index )
+{
+	if( index <= IDT_RESERVED || index > IDT_DESCRIPTORS )
+	{
+		return;
+	}
+
+	auto size = _interrupt_stub_size / ( IDT_DESCRIPTORS - IDT_RESERVED );
+	auto stub = ( uint8_t* )( ( uintptr_t )_interrupt_stub_base + size * index );
+
+	auto nr      = ( uint32_t* )&stub[patch_index];
+	auto handler = ( uint32_t* )&stub[patch_jump];
+
+	*nr = IDT_STUB_NR_MAGIC;
+	*handler = IDT_STUB_FN_FASTGS;
+
+	_interrupt_pointer_table[index] = ( uintptr_t )0xbadf00d;
+	idt[index].type &= ~kIDTPresent;
 }
 
 void
@@ -156,10 +249,19 @@ init( void )
 		log::printk( "Initializing interrupt descriptor table with %d entries..\n",
 		             IDT_DESCRIPTORS );
 
-		memset( idt, 0, sizeof( idt ) );
-		for( size_t i = 0; i < IDT_DESCRIPTORS; ++i )
+		if( _detect_patch_offsets() == false )
 		{
-			register_irq_handler( i, _default_irq_stub );
+			log::printk( "Unable to determine interrupt stub patch offsets!\n" );
+			do{}while( 1 );
+		}
+
+		memset( idt, 0, sizeof( idt ) );
+		for( auto i = 0; i < IDT_DESCRIPTORS; ++i )
+		{
+			if( i <= IDT_RESERVED )
+			{
+				register_system_handler( i, _default_irq_stub );
+			}
 
 			IDTTypeSet  type;
 			IDTStackSet stack;
@@ -194,13 +296,18 @@ init( void )
 					stack = kIDTStackNone;
 					break;
 
+				case 33 ... IDT_DESCRIPTORS:
+					type  = kIDTTypeIRQ | kIDTAccessSys;
+					stack = kIDTStackNone;
+					break;
+
 				default:
 					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
 					stack = kIDTStackNone;
 					break;
 			}
 			_setup_idt_descriptor( idt, i, stub_base, 0x08, stack, type );
-			stub_base += stub_size;
+			stub_base += ( i > IDT_RESERVED ) ? 0 : stub_size;
 		}
 
 		memset( &idtr, 0, sizeof( idtr ) );

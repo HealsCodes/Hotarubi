@@ -32,11 +32,24 @@ _interrupt_stub_\nr:
 		pushq $0
 	.endif
 		pushq $\nr
+		pushq %rax
 	.if \read_msr == 0
-		jmp L_interrupt_swapgs_fast
+		lea L_interrupt_swapgs_fast, %rax
+		jmp *%rax
 	.else
-		jmp L_interrupt_swapgs_slow
+		lea L_interrupt_swapgs_slow, %rax
+		jmp *%rax
 	.endif
+	/* align to force equal sized stubs */
+	.align 16
+.endm
+
+.macro interrupt_stub_base
+		pushq $0
+		pushq $0xffffffffdeadbeef
+		pushq %rax
+		lea L_interrupt_swapgs_fast, %rax
+		jmp *%rax
 	/* align to force equal sized stubs */
 	.align 16
 .endm
@@ -131,26 +144,26 @@ interrupt_stub 19, 0, 0 /* #XM  - SIMD floating point error */
 
 interrupt_stub 32, 0, 0 /* syscall */
 
-/* hardware interrupts */
+/* freely allocatable, dynamically patched stubs */
 
-interrupt_stub 33, 0, 0 /* Timer tick              */
-interrupt_stub 34, 0, 0 /* Keyboard                */
-interrupt_stub 35, 0, 0 /* Not assigned / ACPI SCI */
-interrupt_stub 36, 0, 0 /* COM 2 / 4               */
-interrupt_stub 37, 0, 0 /* COM 1 / 3               */
-interrupt_stub 38, 0, 0 /* hard disk controller    */
-interrupt_stub 39, 0, 0 /* floppy disk controller  */
-interrupt_stub 40, 0, 0 /* parallel port 1         */
-interrupt_stub 41, 0, 0 /* real-time clock         */
-interrupt_stub 42, 0, 0 /* ACPI SCI                */
-interrupt_stub 43, 0, 0 /* ---                     */
-interrupt_stub 44, 0, 0 /* ---                     */
-interrupt_stub 45, 0, 0 /* PS/2 mouse              */
-interrupt_stub 46, 0, 0 /* floating point unit     */
-interrupt_stub 47, 0, 0 /* PATA host bus 1         */
-interrupt_stub 48, 0, 0 /* PATA host bus 2         */
+.globl _interrupt_stub_base
+.type  _interrupt_stub_base, @function
+.globl _interrupt_stub_size
+.type  _interrupt_stub_size, @object
 
+_interrupt_stub_base:
+.rep 223
+	interrupt_stub_base
+.endr
+_interrupt_stub_size:
+	.quad ( _interrupt_stub_size - _interrupt_stub_base )
+
+/* common handler code */
+
+.globl L_interrupt_swapgs_fast
+.type  L_interrupt_swapgs_fast, @function
 L_interrupt_swapgs_fast:
+	popq %rax
 	/* 'fast path' - check CS on the stack */
 	cmp $0x08, 24(%rsp)
 	je  1f
@@ -164,8 +177,10 @@ L_interrupt_swapgs_fast:
 2:
 	iretq
 
-
+.globl L_interrupt_swapgs_slow
+.type  L_interrupt_swapgs_slow, @function
 L_interrupt_swapgs_slow:
+	popq  %rax
 	/* 'slow path' - read msr */
 	pushq %rcx
 	pushq %rax
@@ -194,4 +209,4 @@ L_interrupt_swapgs_slow:
 /******************************************************************************/
 .globl _interrupt_pointer_table
 .type  _interrupt_pointer_table, @object
-.comm  _interrupt_pointer_table, 392,8 /* 33 * 8bytes */
+.comm  _interrupt_pointer_table, 2040,8 /* 57 * 8bytes */
