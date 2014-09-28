@@ -57,4 +57,20 @@ private:
 	uint8_t _lock = 0;
 };
 
+class scoped_lock
+{
+public:
+	scoped_lock( spin_lock &lock ) : _lock{lock}
+	{
+		_lock.lock();
+	};
+
+	~scoped_lock()
+	{
+		_lock.unlock();
+	}
+private:
+	spin_lock &_lock;
+};
+
 #endif
