@@ -79,7 +79,7 @@ ioapic::init( uint64_t address, uint8_t irq_base )
 			{
 				/* mask all */
 				_write( kIOAPICRedirectLo + i * 2,
-				        _read( kIOAPICRedirectLo + i * 2 ) & ( 1 << 16 ) );
+				        _read( kIOAPICRedirectLo + i * 2 ) | ( 1 << 16 ) );
 			}
 		}
 	}
@@ -94,7 +94,7 @@ ioapic::set_route( uint8_t source, uint8_t target,
 		return;
 	}
 
-	uint32_t val_lo = _read( kIOAPICRedirectLo + source * 2 ) & ~0x0000c800,
+	uint32_t val_lo = _read( kIOAPICRedirectLo + source * 2 ) & ~0x0000c0ff,
 	         val_hi = _read( kIOAPICRedirectHi + source * 2 ) & ~0xff000000;
 
 	if( ( val_lo & kIOAPICDeliverNMI ) != kIOAPICDeliverNMI )
@@ -117,11 +117,13 @@ ioapic::set_mask( uint8_t source, bool masked )
 		return;
 	}
 
-	uint32_t val = _read( kIOAPICRedirectLo + source * 2 ) & ~0x0000c000;
+	uint32_t val = _read( kIOAPICRedirectLo + source * 2 ) & ~0x00010000;
 	if( ( val & kIOAPICDeliverNMI ) != kIOAPICDeliverNMI )
 	{
 		/* no reason in trying to mask an NMI.. */
+		val &= ~0x0000e700;
 		val |= _irq_flags( kIRQTriggerConform, kIRQPolarityConform ) | ( masked << 16 );
+		_write( kIOAPICRedirectLo + source * 2, val );
 	}
 }
 
@@ -133,7 +135,7 @@ ioapic::set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity )
 		return;
 	}
 
-	uint32_t val = _read( kIOAPICRedirectLo + source * 2 ) & ~0x0000c070;
+	uint32_t val = _read( kIOAPICRedirectLo + source * 2 ) & ~0x0000e700;
 	val |= _irq_flags( trigger, polarity ) | kIOAPICDeliverNMI;
 	_write( kIOAPICRedirectLo + source * 2, val );
 }
