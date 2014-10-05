@@ -32,6 +32,7 @@ _interrupt_stub_\nr:
 		pushq $0
 	.endif
 		pushq $\nr
+		pushq $0
 		pushq %rax
 	.if \read_msr == 0
 		lea L_interrupt_swapgs_fast, %rax
@@ -47,7 +48,10 @@ _interrupt_stub_\nr:
 .macro interrupt_stub_base
 		pushq $0
 		pushq $0xffffffffdeadbeef
+		pushq $0                           /* dummy push to get stack space  */
 		pushq %rax
+		movq  $0xffffffff0badf00d, %rax    /* fill in the 64bit user context */
+		movq  %rax, 8(%rsp)
 		lea L_interrupt_swapgs_fast, %rax
 		jmp *%rax
 	/* align to force equal sized stubs */
@@ -89,7 +93,7 @@ _interrupt_stub_\nr:
 
 	/* locate the correct RIP */
 	lea   _interrupt_pointer_table, %rbx
-	movq  8(%rbp), %rcx            /* 8(rbp) is the irq number */
+	movq  16(%rbp), %rcx            /* 16(rbp) is the irq number */
 	movq  0(%rbx, %rcx, 8), %rax   /* offset %rcx into %rbx for the handler RIP */
 
 	/* up call to the kernel */
@@ -116,8 +120,8 @@ _interrupt_stub_\nr:
 	popq %r14
 	popq %r15
 	popq %rbp
-	/* remove the error code and interrupt nr */
-	addq $16, %rsp
+	/* remove the error code, user context and interrupt nr */
+	addq $24, %rsp
 .endm
 
 /* system exceptions */

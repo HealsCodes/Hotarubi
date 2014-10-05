@@ -34,6 +34,8 @@
 #define IDT_RESERVED    32
 
 #define IDT_STUB_NR_MAGIC  0xdeadbeef
+#define IDT_STUB_CX_MAGIC  0x0badf00d
+
 #define IDT_STUB_FN_SLOWGS ( (uint32_t)( ( uintptr_t )L_interrupt_swapgs_fast ) & 0xffffffff )
 #define IDT_STUB_FN_FASTGS ( (uint32_t)( ( uintptr_t )L_interrupt_swapgs_slow ) & 0xffffffff )
 
@@ -98,7 +100,7 @@ static struct idt_descriptor idt[IDT_DESCRIPTORS];
 static struct idt_pointer    idtr;
 
 /* offsets used when patching dynamic stubs */
-static size_t patch_index = 0, patch_jump = 0;
+static size_t patch_index = 0, patch_ctxt = 0, patch_jump = 0;
 
 static spin_lock patch_handler_lock, patch_system_lock;
 
@@ -158,13 +160,17 @@ _detect_patch_offsets( void )
 		{
 			patch_index = i;
 		}
+		else if( *magic == IDT_STUB_CX_MAGIC )
+		{
+			patch_ctxt = i;
+		}
 		else if( *magic == IDT_STUB_FN_SLOWGS ||
 		         *magic == IDT_STUB_FN_FASTGS )
 		{
 			patch_jump = i;
 		}
 	}
-	return ( patch_index > 0 && patch_jump > 0 );
+	return ( patch_index > 0 && patch_ctxt > 0 && patch_jump > 0 );
 }
 
 bool
@@ -185,7 +191,8 @@ register_system_handler( unsigned index, irq_handler_fn fn )
 }
 
 bool
-register_irq_handler( unsigned &index, irq_handler_fn fn, bool swapgs_fast )
+register_irq_handler( unsigned &index, irq_handler_fn fn,
+                      uint64_t ucontext, bool swapgs_fast )
 {
 	scoped_lock lock( patch_handler_lock);
 
@@ -195,11 +202,13 @@ register_irq_handler( unsigned &index, irq_handler_fn fn, bool swapgs_fast )
 	for( auto i = 1; i < IDT_DESCRIPTORS - IDT_RESERVED; ++i )
 	{
 		auto nr      = ( uint32_t* )&stub[patch_index];
+		auto context = ( uint64_t* )&stub[patch_ctxt];
 		auto handler = ( uint32_t* )&stub[patch_jump];
 
 		if( *nr == IDT_STUB_NR_MAGIC )
 		{
 			*nr = IDT_RESERVED + i;
+			*context = ucontext;
 			if( swapgs_fast )
 			{
 				*handler = IDT_STUB_FN_FASTGS;
@@ -238,10 +247,14 @@ release_irq_handler( unsigned index )
 	auto stub = ( uint8_t* )( ( uintptr_t )_interrupt_stub_base + size * index );
 
 	auto nr      = ( uint32_t* )&stub[patch_index];
+	auto context = ( uint32_t* )&stub[patch_ctxt];
 	auto handler = ( uint32_t* )&stub[patch_jump];
 
 	*nr = IDT_STUB_NR_MAGIC;
 	*handler = IDT_STUB_FN_FASTGS;
+
+	context[0] = IDT_STUB_CX_MAGIC;
+	context[1] = 0xffffffff;
 
 	_interrupt_pointer_table[index] = ( uintptr_t )0xbadf00d;
 	idt[index].type &= ~kIDTPresent;

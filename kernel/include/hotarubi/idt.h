@@ -50,6 +50,7 @@ namespace idt
 		uint64_t r14;
 		uint64_t r15;
 		uint64_t rbp;
+		uint64_t _context;
 		uint64_t _irq_nr;
 		uint32_t error_code;
 		uint32_t _padd_2;
@@ -69,7 +70,8 @@ namespace idt
 	typedef void ( *irq_handler_fn )( irq_stack_frame_t &stack_frame );
 
 	bool register_system_handler( unsigned index, irq_handler_fn fn );
-	bool register_irq_handler( unsigned &index, irq_handler_fn fn, bool swapgs_fast=true );
+	bool register_irq_handler( unsigned &index, irq_handler_fn fn,
+	                           uint64_t context=0, bool swapgs_fast=true );
 	void release_irq_handler( unsigned index );
 
 	void init( void );
