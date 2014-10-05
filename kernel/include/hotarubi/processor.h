@@ -26,7 +26,6 @@
 
 #include <hotarubi/processor/core.h>
 #include <hotarubi/processor/regs.h>
-#include <hotarubi/processor/local_data.h>
 
 namespace processor
 {

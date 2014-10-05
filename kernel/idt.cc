@@ -263,7 +263,7 @@ release_irq_handler( unsigned index )
 void
 init( void )
 {
-	if( processor::is_bsp() )
+	if( processor::core::is_bsp() )
 	{
 		uintptr_t stub_size = ( ( uintptr_t )_interrupt_stub_1 ) - ( ( uintptr_t )_interrupt_stub_0 );
 		uintptr_t stub_base = ( ( uintptr_t )_interrupt_stub_0 );

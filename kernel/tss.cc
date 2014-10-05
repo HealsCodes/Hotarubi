@@ -26,7 +26,6 @@
 #include <hotarubi/tss.h>
 #include <hotarubi/macros.h>
 #include <hotarubi/processor/core.h>
-#include <hotarubi/processor/local_data.h>
 #include <hotarubi/memory/physmm.h>
 #include <hotarubi/memory/const.h>
 
@@ -42,7 +41,7 @@ init( void )
 {
 	struct tss *tss = nullptr;
 
-	if( processor::is_bsp() )
+	if( processor::core::is_bsp() )
 	{
 		tss = &_bsp_tss;
 	}
@@ -60,7 +59,7 @@ init( void )
 	tss->ist[3] = PAGE_SIZE + ( uint64_t )memory::physmm::alloc_page( __PPF( Locked ) );
 
 	/* FIXME: verify those allocations! */
-	processor::local_data()->tss = tss;
+	processor::core::current()->tss = tss;
 }
 
 };

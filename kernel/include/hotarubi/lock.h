@@ -34,8 +34,8 @@ public:
 	void lock( void )
 	{
 #ifdef KERNEL
-		_isr_state = ( processor::read_flags() & ( 1 << 9 ) );
-		processor::disable_interrupts();
+		_isr_state = ( processor::core::read_flags() & ( 1 << 9 ) );
+		processor::core::disable_interrupts();
 #endif
 
 		do {} while( __sync_lock_test_and_set( &_lock, 1 ) );
@@ -47,7 +47,7 @@ public:
 #ifdef KERNEL
 		if( _isr_state )
 		{
-			processor::enable_interrupts();
+			processor::core::enable_interrupts();
 		}
 #endif
 	}

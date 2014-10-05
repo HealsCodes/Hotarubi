@@ -36,8 +36,11 @@
 namespace processor
 {
     #pragma pack( push, 1 )
-	struct local_data
+	class core_local_data
 	{
+	public:
+		core_local_data() : _gs_self{reinterpret_cast<uintptr_t>( this )} {};
+
 		/* _gs_self is used to get a pointer to this struct by accessing %gs:0 */
 		uintptr_t _gs_self;
 
@@ -47,7 +50,7 @@ namespace processor
 	};
     #pragma pack( pop )
 
-	static_assert( offsetof( struct local_data, _gs_self ) == 0,
+	static_assert( offsetof( core_local_data, _gs_self ) == 0,
 	               "_gs_self must be located at offset 0 in struct local_data.");
 };
 

@@ -25,12 +25,12 @@
 #define __ACPI_ACPI_H 1
 
 #include <hotarubi/processor/ioapic.h>
-#include <hotarubi/processor/local_data.h>
+#include <hotarubi/processor/core.h>
 
 namespace acpi
 {
     void init_tables( void );
-    void parse_madt( struct processor::local_data *&ap_data, uint32_t &core_count,
+    void parse_madt( processor::core *&aps, uint32_t &core_count,
                      processor::ioapic *&ioapics, uint32_t &ioapic_count );
 };
 

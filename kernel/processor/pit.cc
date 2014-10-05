@@ -27,7 +27,6 @@
 #include <hotarubi/log/log.h>
 
 #include <hotarubi/processor/core.h>
-#include <hotarubi/processor/local_data.h>
 
 namespace processor
 {
@@ -49,13 +48,13 @@ pit::init( void )
 		memory::mmio::activate_region( _io_ports );
 		if( idt::register_irq_handler( _vector, _irq_handler, ( uint64_t )this ) )
 		{
-			route_isa_irq( 0, _vector );
+			core::route_isa_irq( 0, _vector );
 			one_shot( 200_us, nullptr );
 
-			processor::enable_interrupts();
+			core::enable_interrupts();
 			__asm__ __volatile__( "hlt" );
-			processor::disable_interrupts();
-			processor::local_data()->lapic->eoi();
+			core::disable_interrupts();
+			core::current()->lapic->eoi();
 
 			log::printk( "PIC initialized\n" );
 		}

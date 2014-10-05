@@ -28,57 +28,62 @@
 
 #include <hotarubi/processor/pit.h>
 #include <hotarubi/processor/interrupt.h>
+#include <hotarubi/processor/local_data.h>
 
 namespace processor
 {
-	inline uint64_t read_flags( void )
+	class core_local_data;
+	class core : public core_local_data
 	{
-		uint64_t r;
-		__asm__ __volatile__( 
-			"pushf\n"
-			"pop %0\n"
-			: "=r"( r )
-		);
-		return r;
+	public:
+		static inline core* current( void )
+		{
+			core *data = nullptr;
+			__asm__ __volatile__( "mov %%gs:0(,1), %0" : "=r"( data ) );
+			return data;
+		};
+
+		static core* instance( unsigned core );
+		static interrupt *irqs( void );
+		static interrupt *irqs( unsigned n );
+
+		static bool is_bsp( void );
+		static bool route_isa_irq( uint8_t source, uint8_t target );
+		static bool set_nmi( uint8_t source, IRQTriggerMode trigger,
+		                                     IRQPolarity polarity );
+
+		static pit *timer( void );
+
+		static inline uint64_t read_flags( void )
+		{
+			uint64_t r;
+			__asm__ __volatile__(
+				"pushf\n"
+				"pop %0\n"
+				: "=r"( r )
+			);
+			return r;
+		};
+
+		static inline void write_flags( uint64_t flags )
+		{
+			__asm__ __volatile__(
+				"push %0\n"
+				"popf \n"
+				:: "r"( flags )
+			);
+		};
+
+		static inline void disable_interrupts( void )
+		{
+			__asm__ __volatile__( "cli" );
+		};
+
+		static inline void enable_interrupts( void )
+		{
+			__asm__ __volatile__( "sti" );
+		};
 	};
-
-	inline void write_flags( uint64_t flags )
-	{
-		__asm__ __volatile__(
-			"push %0\n"
-			"popf \n"
-			:: "r"( flags )
-		);
-	};
-
-	inline void disable_interrupts( void )
-	{
-		__asm__ __volatile__( "cli" );
-	};
-
-	inline void enable_interrupts( void )
-	{
-		__asm__ __volatile__( "sti" );
-	};
-
-	inline struct local_data* local_data( void )
-	{
-		struct local_data *data = nullptr;
-		__asm__ __volatile__( "mov %%gs:0(,1), %0" : "=r"( data ) );
-		return data;
-	}
-
-	struct local_data* core_data( unsigned core );
-
-	bool is_bsp( void );
-
-	struct interrupt *irqs( void );
-	struct interrupt *irqs( unsigned n );
-
-	bool route_isa_irq( uint8_t source, uint8_t target );
-	bool set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity );
-
-	pit *timer( void );
 };
 
 #endif

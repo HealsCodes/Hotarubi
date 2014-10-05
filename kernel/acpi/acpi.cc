@@ -28,7 +28,6 @@
 #include <hotarubi/processor/pic.h>
 #include <hotarubi/processor/ioapic.h>
 #include <hotarubi/processor/interrupt.h>
-#include <hotarubi/processor/local_data.h>
 
 #include <hotarubi/io.h>
 #include <hotarubi/memory.h>
@@ -79,7 +78,7 @@ _get_table( const char *signature )
 }
 
 void
-parse_madt( struct processor::local_data *&ap_data, uint32_t &core_count,
+parse_madt( processor::core *&aps, uint32_t &core_count,
             processor::ioapic *&ioapics, uint32_t &ioapic_count  )
 {
 	auto madt = ( struct madt* )_get_table( ACPI_MADT_SIG );
@@ -113,10 +112,13 @@ parse_madt( struct processor::local_data *&ap_data, uint32_t &core_count,
 				auto desc     = ( madt_source_override* )entry;
 				auto trigger  = processor::IRQTriggerMode( desc->flags.trigger );
 				auto polarity = processor::IRQPolarity( desc->flags.polarity );
+				auto irq      = processor::core::irqs( desc->source_irq );
 
-				processor::irqs()[desc->source_irq].setup( desc->source_irq,
-				                                           desc->global_irq, 
-				                                           trigger, polarity );
+				if( irq != nullptr )
+				{
+					irq->setup( desc->source_irq, desc->global_irq,
+				                trigger, polarity );
+				}
 				break;
 			}
 
@@ -136,7 +138,7 @@ parse_madt( struct processor::local_data *&ap_data, uint32_t &core_count,
 	if( core_count > 0 )
 	{
 		log::printk( "acpi: detected %i processors\n", core_count );
-		ap_data = new struct processor::local_data[core_count - 1];
+		aps = new processor::core[core_count - 1];
 	}
 
 	if( ioapic_count > 0 )
@@ -157,7 +159,7 @@ parse_madt( struct processor::local_data *&ap_data, uint32_t &core_count,
 				auto desc   = ( madt_lapic_entry* )entry;
 				auto lapic  = new processor::lapic( desc->apic_id, lapic_base );
 				
-				processor::core_data( desc->processor_id )->lapic = lapic;
+				processor::core::instance( desc->processor_id )->lapic = lapic;
 				log::printk( "acpi: detected LAPIC %d for processor %d\n",
 				             desc->apic_id, desc->processor_id );
 				break;
@@ -183,13 +185,13 @@ parse_madt( struct processor::local_data *&ap_data, uint32_t &core_count,
 
 	for( auto i = 0; i < NUM_IRQ_ENTRIES; ++i )
 	{
-		auto irq = processor::irqs()[i];
-		if( irq.override() )
+		auto irq = processor::core::irqs( i );
+		if( irq->override() )
 		{
 			log::printk( "acpi: override IRQ %02x => %02x, %2s, %2s\n",
-			             i, irq.target,
-			             irq.str( irq.trigger ),
-			             irq.str( irq.polarity ) );
+			             i, irq->target,
+			             irq->str( irq->trigger ),
+			             irq->str( irq->polarity ) );
 		}
 	}
 
@@ -206,7 +208,7 @@ parse_madt( struct processor::local_data *&ap_data, uint32_t &core_count,
 				auto polarity = processor::IRQPolarity( desc->flags.polarity );
 
 				log::printk( "acpi: IRQ %02x, global NMI\n", desc->global_irq );
-				if( processor::set_nmi( desc->global_irq, trigger, polarity ) == false )
+				if( processor::core::set_nmi( desc->global_irq, trigger, polarity ) == false )
 				{
 					log::printk( "acpi: no IOAPIC available to handle this NMI!\n" );
 				}
@@ -225,7 +227,7 @@ parse_madt( struct processor::local_data *&ap_data, uint32_t &core_count,
 					log::printk( " on all LAPICs\n" );
 					for( uint32_t i = 0; i < core_count; ++i )
 					{
-						auto lapic = processor::core_data( i )->lapic;
+						auto lapic = processor::core::instance( i )->lapic;
 
 						if( lapic != nullptr )
 						{
@@ -242,7 +244,7 @@ parse_madt( struct processor::local_data *&ap_data, uint32_t &core_count,
 						break;
 					}
 
-					auto lapic = processor::core_data( desc->processor_id )->lapic;
+					auto lapic = processor::core::instance( desc->processor_id )->lapic;
 					if( lapic != nullptr )
 					{
 						log::printk( " on processor %d\n", desc->processor_id );

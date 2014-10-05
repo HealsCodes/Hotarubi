@@ -24,9 +24,8 @@
 #ifndef _MEMORY_MMIO_H
 #define _MEMORY_MMIO_H 1
 
-#include <stdint.h>
-#include <stddef.h>
 #include <bitmask.h>
+#include <hotarubi/types.h>
 
 #define __MMIO( x ) memory::mmio::kMMIOFlag ##x
 
@@ -47,14 +46,14 @@ namespace mmio
 
 	typedef struct resource *resource_t;
 
-	resource_t request_region( const char *name, uintptr_t start, size_t size, 
+	resource_t request_region( const char *name, phys_addr_t start, size_t size,
 	                           MMIOFlagSet flags );
 
 	void release_region( resource_t *region );
 
 	/* FIXME: there is no deactivate_region so it will stay mapped even after
 	 *        being released.. */
-	uintptr_t activate_region( resource_t region );
+	virt_addr_t activate_region( resource_t region );
 
 	void init( void );
 };

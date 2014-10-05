@@ -97,8 +97,8 @@ _setup_tss_descriptor( struct gdt_descriptor *gdt, unsigned index,
 void
 init( void )
 {
-	auto local_data = processor::local_data();
-	auto gdt = local_data->gdt;
+	auto core = processor::core::current();
+	auto gdt = core->gdt;
 
 	memset( gdt, 0, sizeof( struct gdt_descriptor ) * GDT_DESCRIPTOR_COUNT );
 
@@ -110,7 +110,7 @@ init( void )
 	_setup_descriptor( gdt, 3, 0, 0xffffffff, kGDTTypeXR | kGDTAccessUsr | kGDTPresent, flags );
 	_setup_descriptor( gdt, 4, 0, 0xffffffff, kGDTTypeRW | kGDTAccessUsr | kGDTPresent, flags );
 
-	_setup_tss_descriptor( gdt, 5, local_data->tss );
+	_setup_tss_descriptor( gdt, 5, core->tss );
 
 	memset( &_gdtr, 0, sizeof( struct gdt_pointer ) );
 
@@ -129,7 +129,7 @@ init( void )
 		"mov %0, %%ss\n"
 		:: "r"( 0x10 ) );
 
-	processor::regs::write_msr( IA32_GS_BASE, ( uintptr_t )local_data );
+	processor::regs::write_msr( IA32_GS_BASE, ( uintptr_t )core );
 
 	/* jump over to the new code segment */
 	__asm__ __volatile__(

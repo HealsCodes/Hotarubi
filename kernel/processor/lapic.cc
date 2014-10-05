@@ -17,6 +17,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 *******************************************************************************/
 
 /* LAPIC handling */
@@ -169,7 +170,7 @@ lapic::calibrate( void )
 	_ticks_per_msec = 1;
 	_write( kLAPICTimerDivider, ( _read( kLAPICTimerDivider ) & 0xfffffff0 ) | 0x0b );
 
-	timer()->one_shot( 1_ms, [](){ _calibrated = true; } );
+	core::timer()->one_shot( 1_ms, [](){ _calibrated = true; } );
 	set_timer( 0xffffffff, false );
 
 	/* poll until the PIT has fired */
