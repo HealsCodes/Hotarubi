@@ -22,8 +22,8 @@
 #ifndef __MEMORY_VIRTMM_H
 #define __MEMORY_VIRTMM_H 1
 
-#include <stdint.h>
 #include <bitmask.h>
+#include <hotarubi/types.h>
 
 /* shortcut to access PhysPageFlagSet */
 #define __VPF( x ) memory::virtmm::kVPFlag ##x
@@ -55,17 +55,17 @@ namespace virtmm
 	};
 	BITMASK( VirtPageFlagSet );
 
-	extern const uint64_t map_invalid;
+	extern const virt_addr_t map_invalid;
 
-	bool map_address( uint64_t vaddr, VirtPageFlagSet flags );
-	bool map_fixed( uint64_t vaddr, uint64_t paddr, VirtPageFlagSet flags );
-	bool map_address_range( uint64_t vaddr, size_t npages, VirtPageFlagSet flags );
+	bool map_address( virt_addr_t vaddr, VirtPageFlagSet flags );
+	bool map_fixed( virt_addr_t vaddr, phys_addr_t paddr, VirtPageFlagSet flags );
+	bool map_address_range( virt_addr_t vaddr, size_t npages, VirtPageFlagSet flags );
 
-	void unmap_address( uint64_t vaddr );
-	void unmap_fixed( uint64_t vaddr );
-	void unmap_address_range( uint64_t vaddr, size_t npages );
+	void unmap_address( virt_addr_t vaddr );
+	void unmap_fixed( virt_addr_t vaddr );
+	void unmap_address_range( virt_addr_t vaddr, size_t npages );
 
-	bool lookup_mapping( uint64_t vaddr, uint64_t &pml4e, uint64_t &pdpte,
+	bool lookup_mapping( virt_addr_t vaddr, uint64_t &pml4e, uint64_t &pdpte,
 	                                     uint64_t &pdte, uint64_t &pte );
 
 	void init_ap( void );

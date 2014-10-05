@@ -24,8 +24,8 @@
 #ifndef _TSS_H
 #define _TSS_H 1
 
-#include <stdint.h>
 #include <bitmask.h>
+#include <hotarubi/types.h>
 
 namespace tss
 {

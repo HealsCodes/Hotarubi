@@ -19,8 +19,6 @@
 
 *******************************************************************************/
 
-#include <stdint.h>
-#include <stddef.h>
 #include <string.h>
 
 #include <hotarubi/processor.h>
@@ -60,16 +58,16 @@ namespace memory
 {
 namespace physmm
 {
-extern uint64_t memory_upper_bound;
+extern phys_addr_t memory_upper_bound;
 };
 
 namespace virtmm
 {
-const uint64_t map_invalid = 0xffffffffffffffff;
-static uint64_t *system_pml4 = nullptr;
+const virt_addr_t   map_invalid  = 0xffffffffffffffff;
+static virt_addr_t *_system_pml4 = nullptr;
 
 static bool
-_map_region( uint64_t *pml4, uintptr_t vaddr, uintptr_t paddr, size_t len,
+_map_region( uint64_t *pml4, virt_addr_t vaddr, phys_addr_t paddr, size_t len,
              VirtPageFlagSet flags=kVPFlagNone )
 {
 	uint64_t *pdpt = nullptr,
@@ -133,7 +131,7 @@ _map_region( uint64_t *pml4, uintptr_t vaddr, uintptr_t paddr, size_t len,
 }
 
 static bool
-_unmap_region( uint64_t *pml4, uint64_t vaddr, size_t len, bool free_page )
+_unmap_region( uint64_t *pml4, virt_addr_t vaddr, size_t len, bool free_page )
 {
 	uint64_t *pdpt  = nullptr,
 	         *pdt   = nullptr,
@@ -194,24 +192,24 @@ void _create_system_vm( void )
 {
 	log::printk( "Initializing kernel virtual address space..\n" );
 
-	if( ( system_pml4 = ( uint64_t* )physmm::alloc_page( __PPF( Locked ) ) ) == nullptr )
+	if( ( _system_pml4 = ( uint64_t* )physmm::alloc_page( __PPF( Locked ) ) ) == nullptr )
 	{
 		goto error_out;
 	}
-	memset( system_pml4, 0, PAGE_SIZE );
+	memset( _system_pml4, 0, PAGE_SIZE );
 
 	/* map the video ram (bootstrap needs it) */
-	if( !_map_region( system_pml4, 0xa0000, 0xa0000, 80 * 25 * 2, kVPFlagWritable ) )
+	if( !_map_region( _system_pml4, 0xa0000, 0xa0000, 80 * 25 * 2, kVPFlagWritable ) )
 	{
 		goto error_out;
 	}
-	if( !_map_region( system_pml4, 0xb8000, 0xb8000, 80 * 25 * 2, kVPFlagWritable ) )
+	if( !_map_region( _system_pml4, 0xb8000, 0xb8000, 80 * 25 * 2, kVPFlagWritable ) )
 	{
 		goto error_out;
 	}
 
 	/* map kernel .text (ro) */
-	if( !_map_region( system_pml4, 
+	if( !_map_region( _system_pml4, 
 	                  ( uintptr_t )__text, ( uintptr_t )__text - kVMRangeKernelBase,
 	                  ( uintptr_t )__data - ( uintptr_t )__text ) )
 	{
@@ -219,7 +217,7 @@ void _create_system_vm( void )
 	}
 
 	/* map kernel .data and .bss (rw) */
-	if( !_map_region( system_pml4, 
+	if( !_map_region( _system_pml4, 
 	                  ( uintptr_t )__data, ( uintptr_t )__data -  kVMRangeKernelBase,
 	                  ( uintptr_t )__end - ( uintptr_t )__data,
 	                  kVPFlagWritable ) )
@@ -228,7 +226,7 @@ void _create_system_vm( void )
 	}
 
 	/* map the whole set of physical memory */
-	if( !_map_region( system_pml4,
+	if( !_map_region( _system_pml4,
 	                  kVMRangePhysMemBase, 0,
 	                  physmm::memory_upper_bound,
 	                  kVPFlagWritable ) )
@@ -243,23 +241,23 @@ error_out:
 }
 
 bool
-map_address( uint64_t vaddr, VirtPageFlagSet flags )
+map_address( virt_addr_t vaddr, VirtPageFlagSet flags )
 {
 	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
-	uintptr_t addr = ( uintptr_t )physmm::alloc_page( __PPF( Active ) );
+	phys_addr_t addr = ( phys_addr_t )physmm::alloc_page( __PPF( Active ) );
 
 	return _map_region( pml4, vaddr, addr, PAGE_SIZE, flags );
 }
 
 bool
-map_fixed( uint64_t vaddr, uint64_t paddr, VirtPageFlagSet flags )
+map_fixed( virt_addr_t vaddr, phys_addr_t paddr, VirtPageFlagSet flags )
 {
 	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	return _map_region( pml4, vaddr, paddr, PAGE_SIZE, flags );
 }
 
 bool
-map_address_range( uint64_t vaddr, size_t npages, VirtPageFlagSet flags )
+map_address_range( virt_addr_t vaddr, size_t npages, VirtPageFlagSet flags )
 {
 	for( size_t n = 0; n < npages; ++n )
 	{
@@ -276,29 +274,29 @@ map_address_range( uint64_t vaddr, size_t npages, VirtPageFlagSet flags )
 }
 
 void
-unmap_address( uint64_t vaddr )
+unmap_address( virt_addr_t vaddr )
 {
 	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	( void )_unmap_region( pml4, vaddr, PAGE_SIZE, true );
 }
 
 void
-unmap_fixed( uint64_t vaddr )
+unmap_fixed( virt_addr_t vaddr )
 {
 	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	( void )_unmap_region( pml4, vaddr, PAGE_SIZE, false );
 }
 
 void
-unmap_address_range( uint64_t vaddr, size_t npages )
+unmap_address_range( virt_addr_t vaddr, size_t npages )
 {
 	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	( void )_unmap_region( pml4, vaddr, PAGE_SIZE * npages, true );
 }
 
 bool
-lookup_mapping( uint64_t vaddr, uint64_t &pml4e, uint64_t &pdpte,
-                                uint64_t &pdte, uint64_t &pte )
+lookup_mapping( virt_addr_t vaddr, uint64_t &pml4e, uint64_t &pdpte,
+                                   uint64_t &pdte, uint64_t &pte )
 {
 	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() ),
 	         *ptr  = nullptr;
@@ -349,7 +347,7 @@ err_pt:
 void
 init_ap( void )
 {
-	processor::regs::write_cr3( ( uintptr_t )system_pml4 );
+	processor::regs::write_cr3( ( uintptr_t )_system_pml4 );
 }
 
 void
@@ -359,7 +357,7 @@ init( void )
 
 	/* be bold and activate the new PML4 */
 	log::printk( "Switching to kernel virtual address space..\n");
-	processor::regs::write_cr3( ( uintptr_t )system_pml4 );
+	processor::regs::write_cr3( ( uintptr_t )_system_pml4 );
 
 	/* relocate the memory bitmap */
 	physmm::set_physical_base_offset( kVMRangePhysMemBase );

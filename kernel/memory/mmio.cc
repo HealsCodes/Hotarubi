@@ -38,8 +38,8 @@ struct resource
 {
 	const char *name;
 
-	uintptr_t start;
-	uintptr_t range;
+	phys_addr_t start;
+	phys_addr_t range;
 
 	MMIOFlagSet flags;
 	unsigned  refcount;
@@ -50,12 +50,12 @@ struct resource
 	LIST_HEAD( children );
 };
 
-static spin_lock mmio_resource_lock;
-static struct resource mmio_mem_root  = { "IO mem", 0, 0xffffffff, kMMIOFlagIOMem, 1, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
-static struct resource mmio_port_root = { "IO ports", 0, 0xffff, kMMIOFlagIOPort, 1, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
+static spin_lock _mmio_resource_lock;
+static resource _mmio_mem_root { "IO mem", 0, 0xffffffff, kMMIOFlagIOMem, 1, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
+static resource _mmio_port_root { "IO ports", 0, 0xffff, kMMIOFlagIOPort, 1, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
 
 static resource_t
-_check_resource( resource_t root, uintptr_t start, uintptr_t range )
+_check_resource( resource_t root, phys_addr_t start, phys_addr_t range )
 {
 	/* check if we overlapp root */
 	if( ( ( start < root->start && range > root->start ) ||   /* overlaps start */
@@ -68,7 +68,7 @@ _check_resource( resource_t root, uintptr_t start, uintptr_t range )
 	/* check if we overlap any children */
 	LIST_FOREACH( ptr, &root->children )
 	{
-		resource_t child = LIST_ENTRY( ptr, struct resource, siblings );
+		auto child = LIST_ENTRY( ptr, struct resource, siblings );
 		if( _check_resource( child, start, range ) != nullptr )
 		{
 			return child;
@@ -78,7 +78,7 @@ _check_resource( resource_t root, uintptr_t start, uintptr_t range )
 }
 
 static resource_t
-_find_shared( resource_t root, uintptr_t start, uintptr_t range )
+_find_shared( resource_t root, phys_addr_t start, phys_addr_t range )
 {
 	if( start == root->start && range == root->range && root->flags & kMMIOFlagShared )
 	{
@@ -87,7 +87,7 @@ _find_shared( resource_t root, uintptr_t start, uintptr_t range )
 	/* check for matching children children */
 	LIST_FOREACH( ptr, &root->children )
 	{
-		resource_t child = LIST_ENTRY( ptr, struct resource, siblings );
+		auto child = LIST_ENTRY( ptr, struct resource, siblings );
 		if( _find_shared( child, start, range ) != nullptr )
 		{
 			return child;
@@ -109,7 +109,7 @@ _add_nested( resource_t root, resource_t child )
 	{
 		LIST_FOREACH( ptr, &root->siblings )
 		{
-			resource_t sibling = LIST_ENTRY( ptr, struct resource, siblings );
+			auto sibling = LIST_ENTRY( ptr, struct resource, siblings );
 			if( sibling->start > child->start )
 			{
 				list_add_before( &sibling->siblings, &child->siblings );
@@ -153,8 +153,7 @@ _add_nested( resource_t root, resource_t child )
 static resource_t
 _request_resource( resource_t root, resource_t request )
 {
-	resource_t collision = nullptr;
-	collision = _check_resource( root, request->start, request->range );
+	auto collision = _check_resource( root, request->start, request->range );
 	if( collision == nullptr )
 	{
 		if( _add_nested( root, request ) )
@@ -193,19 +192,19 @@ _release_resource( resource_t region )
 }
 
 resource_t
-request_region( const char *name, uintptr_t start, size_t size, MMIOFlagSet flags )
+request_region( const char *name, phys_addr_t start, size_t size, MMIOFlagSet flags )
 {
 	resource_t request = nullptr;
-	resource_t root = ( ( flags & kMMIOFlagIOPort ) ? &mmio_port_root
-	                                                : &mmio_mem_root );
+	resource_t root = ( ( flags & kMMIOFlagIOPort ) ? &_mmio_port_root
+	                                                : &_mmio_mem_root );
 	if( flags & kMMIOFlagShared )
 	{
-		mmio_resource_lock.lock();
+		_mmio_resource_lock.lock();
 		if( ( request = _find_shared( root, start, start + size ) ) != nullptr )
 		{
 			++request->refcount;
 		}
-		mmio_resource_lock.unlock();
+		_mmio_resource_lock.unlock();
 	}
 	if( request == nullptr )
 	{
@@ -224,13 +223,13 @@ request_region( const char *name, uintptr_t start, size_t size, MMIOFlagSet flag
 		request->siblings.next = nullptr;
 		INIT_LIST( request->children );
 
-		mmio_resource_lock.lock();
+		_mmio_resource_lock.lock();
 		if( _request_resource( root, request ) != request )
 		{
 			delete request;
 			request = nullptr;
 		}
-		mmio_resource_lock.unlock();
+		_mmio_resource_lock.unlock();
 	}
 	return request;
 }
@@ -238,29 +237,29 @@ request_region( const char *name, uintptr_t start, size_t size, MMIOFlagSet flag
 void
 release_region( resource_t *region )
 {
-	mmio_resource_lock.lock();
+	_mmio_resource_lock.lock();
 	_release_resource( *region );
 	if( ( *region )->refcount == 0 )
 	{
 		delete *region;
 		*region = nullptr;
 	}
-	mmio_resource_lock.unlock();
+	_mmio_resource_lock.unlock();
 }
 
-uintptr_t
+virt_addr_t
 activate_region( resource_t region )
 {
 	if( region->flags & kMMIOFlagIOPort )
 	{
 		/* IO-Ports are not mapped.. */
-		return region->start;
+		return ( virt_addr_t )region->start;
 	}
 
 #ifdef KERNEL
 	/* check if any parent is mapped */
-	mmio_resource_lock.lock();
-	resource_t tmp = region;
+	_mmio_resource_lock.lock();
+	auto tmp = region;
 	do {
 		if( tmp->flags & kMMIOFlagMapped )
 		{
@@ -279,16 +278,16 @@ activate_region( resource_t region )
 
 out_mapped:
 	region->flags |= kMMIOFlagMapped;
-	mmio_resource_lock.unlock();
+	_mmio_resource_lock.unlock();
 #endif
-	return ( uintptr_t )( virtmm::kVMRangeIOMapBase + region->start );
+	return ( virt_addr_t )( virtmm::kVMRangeIOMapBase + region->start );
 }
 
 void
 init( void )
 {
-	INIT_LIST( mmio_mem_root.children );
-	INIT_LIST( mmio_port_root.children );
+	INIT_LIST( _mmio_mem_root.children );
+	INIT_LIST( _mmio_port_root.children );
 }
 
 };

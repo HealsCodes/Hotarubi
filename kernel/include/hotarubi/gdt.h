@@ -24,8 +24,8 @@
 #ifndef _GDT_H
 #define _GDT_H 1
 
-#include <stdint.h>
 #include <bitmask.h>
+#include <hotarubi/types.h>
 
 namespace gdt
 {
@@ -100,6 +100,7 @@ namespace gdt
 		uint64_t address;
 	};
 	#pragma pack( pop )
+
 	void init( void );
 };
 

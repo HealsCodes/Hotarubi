@@ -22,11 +22,11 @@
 /* locking primitives */
 
 #ifndef __LOCK_H
-#define __LOCK_H
+#define __LOCK_H 1
 
-#include <stdint.h>
-#include <hotarubi/processor/core.h>
+#include <hotarubi/types.h>
 #include <hotarubi/io.h>
+#include <hotarubi/processor/core.h>
 
 class spin_lock
 {

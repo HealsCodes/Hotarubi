@@ -24,8 +24,8 @@
 #ifndef __ACPI_TABLES_H
 #define __ACPI_TABLES_H 1
 
-#include <stdint.h>
 #include <string.h>
+#include <hotarubi/types.h>
 
 namespace acpi
 {

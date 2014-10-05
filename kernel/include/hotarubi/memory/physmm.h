@@ -22,10 +22,11 @@
 #ifndef __MEMORY_PHYSMM_H
 #define __MEMORY_PHYSMM_H 1
 
-#include <hotarubi/boot/multiboot.h>
-
 #include <list.h>
 #include <bitmask.h>
+
+#include <hotarubi/types.h>
+#include <hotarubi/boot/multiboot.h>
 
 /* BEWARE: this macro only works for addresses in kernel space! */
 #define __VMBASE memory::virtmm::kVMRangePhysMemBase
@@ -63,8 +64,8 @@ namespace physmm
 
 	void init( const multiboot_info_t *boot_info );
 
-	void set_physical_base_offset( const uint64_t offset );
-	uint64_t physical_base_offset( void );
+	void set_physical_base_offset( const phys_addr_t offset );
+	phys_addr_t physical_base_offset( void );
 
 	uint32_t free_page_count( void );
 
@@ -74,7 +75,7 @@ namespace physmm
 	void free_page( const void *page );
 	void free_page_range( const void *page, unsigned count );
 
-	page_map_t *get_page_map( uint64_t paddr );
+	page_map_t *get_page_map( phys_addr_t paddr );
 };
 };
 

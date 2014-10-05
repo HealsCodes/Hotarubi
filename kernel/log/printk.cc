@@ -21,10 +21,10 @@
 
 /* kernel logging via printk (needs work..) */
 
-#include <stdint.h>
-#include <stddef.h>
 #include <string.h>
 #include <_vcbprintf.h>
+
+#include <hotarubi/types.h>
 
 #include <hotarubi/io.h>
 #include <hotarubi/lock.h>
@@ -47,7 +47,7 @@ static struct ring_buffer logring;
 static size_t
 emit( void *p, const char *str, size_t n )
 {
-	struct ring_buffer *buffp = ( struct ring_buffer* )p;
+	auto buffp = ( struct ring_buffer* )p;
 
 	for( size_t i = 0; i < n; ++i, ++str )
 	{

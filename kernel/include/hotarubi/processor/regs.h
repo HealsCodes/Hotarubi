@@ -24,7 +24,7 @@
 #ifndef __PROCESSOR_REGS_H
 #define __PROCESSOR_REGS_H 1
 
-#include <stdint.h>
+#include <hotarubi/types.h>
 
 namespace processor
 {

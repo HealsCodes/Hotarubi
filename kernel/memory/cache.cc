@@ -112,16 +112,16 @@ static_assert( offsetof( struct bufctl, slab ) == offsetof( struct bufctl_inline
                "bufctl is not transparently castable to bufctl_inline !");
 
 /* lockal cache pools:
- * cache_cache  - has to be a static allocation since it serves as supply for all
+ * _cache_cache  - has to be a static allocation since it serves as supply for all
  *                other mem_caches.
  *
- * slab_cache   - used to allocate SLABS for caches where they can't be inlined
+ * _slab_cache   - used to allocate SLABS for caches where they can't be inlined
  *
- * bufctl_cache - same as slab_cache but for bufctl structs
+ * _bufctl_cache - same as _slab_cache but for bufctl structs
  */
-static struct mem_cache cache_cache;
-static mem_cache_t slab_cache   = nullptr;
-static mem_cache_t bufctl_cache = nullptr;
+static mem_cache   _cache_cache;
+static mem_cache_t _slab_cache   = nullptr;
+static mem_cache_t _bufctl_cache = nullptr;
 
 /* default backing storage allocators */
 #ifdef KERNEL
@@ -173,18 +173,18 @@ extern void  _backing_page_free( void *ptr, size_t n );
 #define BUFFER_MAGIC_SIZE sizeof( uint16_t )
 #define BUFFER_MAGIC_WORD 0xaa55
 
-static struct slab*
-_slab_alloc( struct mem_cache *cache )
+static slab*
+_slab_alloc( mem_cache *cache )
 {
 	void *backing = cache->slab_alloc( cache->alloc_size );
 
 	if( cache->slab_alloc == _backing_page_alloc )
 	{
 		/* associate the page to this cache */
-		physmm::page_map_t *page_map = physmm::get_page_map( __PA( backing ) );
+		auto page_map = physmm::get_page_map( __PA( backing ) );
 		if( page_map != nullptr )
 		{
-			page_map->link.next = ( struct list_head* )cache;
+			page_map->link.next = ( list_head* )cache;
 		}
 	}
 	cache->stats.allocation += cache->alloc_size;
@@ -198,7 +198,7 @@ _slab_alloc( struct mem_cache *cache )
 	}
 
 	slab = ( ( cache->compact ) ? ( SLAB_INLINE( backing, cache ) )
-	                            : ( SLAB_EXTERN( slab_cache ) ) );
+	                            : ( SLAB_EXTERN( _slab_cache ) ) );
 
 	if( slab == nullptr )
 	{
@@ -233,11 +233,11 @@ _slab_alloc( struct mem_cache *cache )
 	for( size_t i = 0; i < buff_avail; ++i )
 	{
 		/* fill the slab */
-		void *buffer = ( void* )( ( uintptr_t )backing + buff_size * i );
-		size_t obj_size = cache->obj_size + ( ( cache->markers ) ? BUFFER_MAGIC_SIZE : 0 );
+		auto buffer = ( void* )( ( uintptr_t )backing + buff_size * i );
+		auto obj_size = cache->obj_size + ( ( cache->markers ) ? BUFFER_MAGIC_SIZE : 0 );
 
-		struct bufctl *bufctl = ( ( cache->compact ) ? ( BUFCTL_INLINE( buffer, obj_size ) )
-		                                             : ( BUFCTL_EXTERN( bufctl_cache ) ) );
+		auto bufctl = ( ( cache->compact ) ? ( BUFCTL_INLINE( buffer, obj_size ) )
+		                                   : ( BUFCTL_EXTERN( _bufctl_cache ) ) );
 
 		if( bufctl == nullptr )
 		{
@@ -246,7 +246,7 @@ _slab_alloc( struct mem_cache *cache )
 
 		if( cache->markers )
 		{
-			uint16_t *magic = ( uint16_t* )( ( uintptr_t )buffer + cache->obj_size );
+			auto *magic = ( uint16_t* )( ( uintptr_t )buffer + cache->obj_size );
 			*magic = BUFFER_MAGIC_WORD;
 		}
 
@@ -275,15 +275,15 @@ _slab_alloc( struct mem_cache *cache )
 err_no_bufctl:
 	SLIST_FOREACH_MUTABLE( item, &slab->bufctls )
 	{
-		struct bufctl *bufctl = SLIST_ENTRY( item, struct bufctl, link );
+		auto bufctl = SLIST_ENTRY( item, struct bufctl, link );
 
 		slist_del( &slab->bufctls, &bufctl->link );
 		list_del( &bufctl->bufctls );
 
-		put_object( bufctl_cache, bufctl );
+		put_object( _bufctl_cache, bufctl );
 		--cache->stats.buffers;
 	}
-	put_object( slab_cache, slab );
+	put_object( _slab_cache, slab );
 
 err_no_slab:
 	cache->slab_free( backing, cache->alloc_size );
@@ -294,9 +294,9 @@ err_no_backing:
 }
 
 static void
-_slab_release( struct mem_cache *cache, struct slab *slab )
+_slab_release( mem_cache *cache, slab *slab )
 {
-	void *backing = slab->backing;
+	auto backing = slab->backing;
 
 	if( backing != nullptr )
 	{
@@ -305,7 +305,7 @@ _slab_release( struct mem_cache *cache, struct slab *slab )
 			/* huge caches need their parts to be returned to the space caches */
 			SLIST_FOREACH_MUTABLE( item, &slab->bufctls )
 			{
-				struct bufctl *bufctl = SLIST_ENTRY( item, struct bufctl, link );
+				auto bufctl = SLIST_ENTRY( item, struct bufctl, link );
 
 				if( cache->obj_erase )
 				{
@@ -332,10 +332,10 @@ _slab_release( struct mem_cache *cache, struct slab *slab )
 				slist_del( &slab->bufctls, &bufctl->link );
 				list_del( &bufctl->bufctls );
 
-				put_object( bufctl_cache, bufctl );
+				put_object( _bufctl_cache, bufctl );
 				--cache->stats.buffers;
 			}
-			put_object( slab_cache, slab );
+			put_object( _slab_cache, slab );
 			--cache->stats.slabs;
 		}
 		/* the rest is as simple as releasing the backing storage */
@@ -345,11 +345,11 @@ _slab_release( struct mem_cache *cache, struct slab *slab )
 }
 
 static void*
-_slab_get_object( struct mem_cache *cache, struct slab *slab )
+_slab_get_object( mem_cache *cache, slab *slab )
 {
 	if( ! slist_empty( &slab->bufctls ) )
 	{
-		struct bufctl *bufctl = SLIST_HEAD_ENTRY( &slab->bufctls, struct bufctl, link );
+		auto bufctl = SLIST_HEAD_ENTRY( &slab->bufctls, struct bufctl, link );
 
 		slist_del( &slab->bufctls, &bufctl->link );
 		bufctl->slab = slab;
@@ -372,7 +372,7 @@ _slab_get_object( struct mem_cache *cache, struct slab *slab )
 }
 
 static void
-_slab_put_object( struct slab *slab, struct bufctl *bufctl )
+_slab_put_object( slab *slab, bufctl *bufctl )
 {
 	if( slab->refs )
 	{
@@ -382,24 +382,24 @@ _slab_put_object( struct slab *slab, struct bufctl *bufctl )
 }
 
 static inline bool
-_slab_full( struct slab *slab )
+_slab_full( slab *slab )
 {
 	return slist_empty( &slab->bufctls );
 }
 
 static inline bool
-_slab_empty( struct slab *slab )
+_slab_empty( slab *slab )
 {
 	return slab->refs == 0;
 }
 
 static void
-_cache_sort( struct mem_cache *cache )
+_cache_sort( mem_cache *cache )
 {
 	/* migrate partial slabs from the full list */
 	LIST_FOREACH_MUTABLE( ptr, &cache->full )
 	{
-		struct slab *slab = LIST_ENTRY( ptr, struct slab, slabs );
+		auto slab = LIST_ENTRY( ptr, struct slab, slabs );
 		if( !_slab_full( slab ) )
 		{
 			list_del( ptr );
@@ -409,7 +409,7 @@ _cache_sort( struct mem_cache *cache )
 	/* migrate partial slabs from the free list */
 	LIST_FOREACH_MUTABLE( ptr, &cache->free )
 	{
-		struct slab *slab = LIST_ENTRY( ptr, struct slab, slabs );
+		auto slab = LIST_ENTRY( ptr, struct slab, slabs );
 		if( !_slab_empty( slab ) )
 		{
 			list_del( ptr );
@@ -420,7 +420,7 @@ _cache_sort( struct mem_cache *cache )
 	/* migrate empty or full slabs from the used list */
 	LIST_FOREACH_MUTABLE( ptr, &cache->used )
 	{
-		struct slab *slab = LIST_ENTRY( ptr, struct slab, slabs );
+		auto slab = LIST_ENTRY( ptr, struct slab, slabs );
 		if( _slab_full( slab ) )
 		{
 			list_del( ptr );
@@ -432,11 +432,10 @@ _cache_sort( struct mem_cache *cache )
 			list_add_tail( &cache->free, ptr );
 		}
 	}
-
 }
 
 static void
-_cache_init( struct mem_cache *cache, const char *name, size_t size, size_t align,
+_cache_init( mem_cache *cache, const char *name, size_t size, size_t align,
              bool check_overflow = true,
              cache_obj_setup setup = nullptr, cache_obj_erase erase = nullptr,
              backend_alloc back_alloc = nullptr, backend_free back_free = nullptr )
@@ -559,7 +558,7 @@ create( const char *name, size_t size, size_t align, bool check_overflow,
         cache_obj_setup setup, cache_obj_erase erase,
         backend_alloc back_alloc, backend_free back_free )
 {
-	mem_cache_t cache = ( mem_cache_t )get_object( &cache_cache );
+	mem_cache_t cache = ( mem_cache_t )get_object( &_cache_cache );
 
 	if( cache != nullptr )
 	{
@@ -578,11 +577,11 @@ create( const char *name, size_t size, size_t align, bool check_overflow,
 bool
 reap( mem_cache_t cache )
 {
-	cache->lock.lock();
+	scoped_lock lock( cache->lock );
+
 	/* try to reclaim space by releasing free slabs */
 	if( list_empty( &cache->free ) )
 	{
-		cache->lock.unlock();
 		return false;
 	}
 
@@ -590,48 +589,45 @@ reap( mem_cache_t cache )
 	{
 		_slab_release( cache, LIST_ENTRY( item, struct slab, slabs ) );
 	}
-	cache->lock.unlock();
 	return true;
 }
 
 bool
 release( mem_cache_t cache, bool force )
 {
-	cache->lock.lock();
-
-	if( ( !list_empty( &cache->full )   ||
-		  !list_empty( &cache->used ) ) &&
-		  force == false )
 	{
-		log::printk( "cache::release: refusing to free '%s' which still contains allocations!\n",
-		             cache->name );
+		scoped_lock lock( cache->lock );
 
-		cache->lock.unlock();
-		return false;
-	}
-
-	if( force )
-	{
-		LIST_FOREACH_MUTABLE( item, &cache->full )
+		if( ( !list_empty( &cache->full )   ||
+			  !list_empty( &cache->used ) ) &&
+			  force == false )
 		{
-			log::printk( "releasing full slab: %p\n", LIST_ENTRY( item, struct slab, slabs ) );
-			_slab_release( cache, LIST_ENTRY( item, struct slab, slabs ) );
+			log::printk( "cache::release: refusing to free '%s' which still contains allocations!\n",
+			             cache->name );
+			return false;
 		}
 
-		LIST_FOREACH_MUTABLE( item, &cache->used )
+		if( force )
 		{
-			log::printk( "releasing partial slab: %p\n", LIST_ENTRY( item, struct slab, slabs ) );
+			LIST_FOREACH_MUTABLE( item, &cache->full )
+			{
+				log::printk( "releasing full slab: %p\n", LIST_ENTRY( item, struct slab, slabs ) );
+				_slab_release( cache, LIST_ENTRY( item, struct slab, slabs ) );
+			}
+
+			LIST_FOREACH_MUTABLE( item, &cache->used )
+			{
+				log::printk( "releasing partial slab: %p\n", LIST_ENTRY( item, struct slab, slabs ) );
+				_slab_release( cache, LIST_ENTRY( item, struct slab, slabs ) );
+			}
+		}
+		LIST_FOREACH_MUTABLE( item, &cache->free )
+		{
+			log::printk( "releasing free slab: %p\n", LIST_ENTRY( item, struct slab, slabs ) );
 			_slab_release( cache, LIST_ENTRY( item, struct slab, slabs ) );
 		}
 	}
-	LIST_FOREACH_MUTABLE( item, &cache->free )
-	{
-		log::printk( "releasing free slab: %p\n", LIST_ENTRY( item, struct slab, slabs ) );
-		_slab_release( cache, LIST_ENTRY( item, struct slab, slabs ) );
-	}
-
-	cache->lock.unlock();
-	put_object( &cache_cache, cache );
+	put_object( &_cache_cache, cache );
 
 	return true;
 }
@@ -648,7 +644,7 @@ mem_cache_t get_cache( void *ptr )
 {
 	if( ptr != nullptr )
 	{
-		physmm::page_map_t *map = physmm::get_page_map( __PA( ptr ) );
+		auto map = physmm::get_page_map( __PA( ptr ) );
 		if( map != nullptr && map->flags & __PPF( Slab ) )
 		{
 			return ( mem_cache_t )map->link.next;
@@ -661,10 +657,10 @@ void
 init( void )
 {
 	log::printk( "Initializing SLAB object cache..\n" );
-	_cache_init( &cache_cache, "cache::cache-pool", sizeof( struct mem_cache ), 4 );
+	_cache_init( &_cache_cache, "cache::cache-pool", sizeof( struct mem_cache ), 4 );
 
-	slab_cache   = create( "cache::slab-pool", sizeof( struct slab ), 4 );
-	bufctl_cache = create( "cache::bufctl-pool", sizeof( struct bufctl ), 4 );
+	_slab_cache   = create( "cache::slab-pool", sizeof( struct slab ), 4 );
+	_bufctl_cache = create( "cache::bufctl-pool", sizeof( struct bufctl ), 4 );
 }
 
 };

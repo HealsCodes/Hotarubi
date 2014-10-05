@@ -19,8 +19,6 @@
 
 *******************************************************************************/
 
-#include <stdint.h>
-#include <stddef.h>
 #include <string.h>
 
 #include <hotarubi/memory/physmm.h>
@@ -42,46 +40,47 @@ namespace memory
 namespace physmm
 {
 
-       page_map_t *memory_map_pages = nullptr;
-static uint32_t   *memory_map_data  = nullptr;
-static uint32_t    memory_map_size  = 0;
-static uint32_t    memory_map_used  = 0;
-static uint64_t    memory_map_base  = 0; /* offset applied to physical addresses */
-static spin_lock    memory_map_lock;
-uint64_t memory_upper_bound = 0;
+phys_addr_t        memory_upper_bound = 0;
+page_map_t        *memory_map_pages   = nullptr;
+
+static uint32_t   *_memory_map_data   = nullptr;
+static uint32_t    _memory_map_size   = 0;
+static uint32_t    _memory_map_used   = 0;
+static phys_addr_t _memory_map_base   = 0; /* offset applied to physical addresses */
+static spin_lock   _memory_map_lock;
 
 static inline bool
 _peek_used( uint64_t bit )
 {
-	if( bit > memory_map_size * 8 )
+	if( bit > _memory_map_size * 8 )
 	{
 		return true;
 	}
-	return memory_map_data[ bit / 32 ] & ( 1 << ( bit % 32 ) );
+	return _memory_map_data[ bit / 32 ] & ( 1 << ( bit % 32 ) );
 }
 
 static inline void
 _mark_used( uint64_t bit )
 {
-	if( ( bit < memory_map_size * 8 ) && _peek_used( bit ) == false )
+	if( ( bit < _memory_map_size * 8 ) && _peek_used( bit ) == false )
 	{
-		memory_map_data[ bit / 32 ] |= ( 1 << ( bit % 32 ) );
-		++memory_map_used;
+		_memory_map_data[ bit / 32 ] |= ( 1 << ( bit % 32 ) );
+		++_memory_map_used;
 	}
 }
 
 static inline void
 _mark_free( uint64_t bit )
 {
-	if( ( bit < memory_map_size * 8 ) && _peek_used( bit ) == true )
+	if( ( bit < _memory_map_size * 8 ) && _peek_used( bit ) == true )
 	{
-		memory_map_data[ bit / 32 ] &= ~( 1 << ( bit % 32 ) );
-		--memory_map_used;
+		_memory_map_data[ bit / 32 ] &= ~( 1 << ( bit % 32 ) );
+		--_memory_map_used;
 	}
 }
 
 static inline void
-_mark_free_range( uint64_t addr, size_t len )
+_mark_free_range( phys_addr_t addr, size_t len )
 {
 	uint64_t bit = addr / PAGE_SIZE;
 	len = len / PAGE_SIZE;
@@ -93,7 +92,7 @@ _mark_free_range( uint64_t addr, size_t len )
 }
 
 static inline void
-_mark_used_range( uint64_t addr, size_t len )
+_mark_used_range( phys_addr_t addr, size_t len )
 {
 	uint64_t bit = addr / PAGE_SIZE;
 	len = len / PAGE_SIZE;
@@ -104,12 +103,12 @@ _mark_used_range( uint64_t addr, size_t len )
 	}
 }
 
-static inline uint64_t
+static inline phys_addr_t
 _search_first_free( void )
 {
-	for( size_t i = 0; i < memory_map_size / sizeof( memory_map_data[0] ); ++i )
+	for( size_t i = 0; i < _memory_map_size / sizeof( _memory_map_data[0] ); ++i )
 	{
-		if( memory_map_data[i] != 0xffffffff )
+		if( _memory_map_data[i] != 0xffffffff )
 		{
 			for( uint64_t bit = 0; bit < 32; ++bit )
 			{
@@ -123,7 +122,7 @@ _search_first_free( void )
 	return 0;
 }
 
-static inline uint64_t
+static inline phys_addr_t
 _search_first_free_range( unsigned num )
 {
 	if( num <= 1 )
@@ -132,9 +131,9 @@ _search_first_free_range( unsigned num )
 	}
 
 	/* TODO: faster version using masks! */
-	for( size_t i = 0; i < memory_map_size / sizeof( memory_map_data[0] ); ++i )
+	for( size_t i = 0; i < _memory_map_size / sizeof( _memory_map_data[0] ); ++i )
 	{
-		if( memory_map_data[i] != 0xffffffff )
+		if( _memory_map_data[i] != 0xffffffff )
 		{
 			for( uint64_t bit = 0; bit < 32; ++bit )
 			{
@@ -162,7 +161,7 @@ _search_first_free_range( unsigned num )
 }
 
 static void
-_flag_page_range( uint64_t addr, PhysPageFlagSet flags, size_t len )
+_flag_page_range( phys_addr_t addr, PhysPageFlagSet flags, size_t len )
 {
 #ifdef KERNEL
 
@@ -178,7 +177,7 @@ _flag_page_range( uint64_t addr, PhysPageFlagSet flags, size_t len )
 }
 
 static void
-_free_page_range( uint64_t addr, size_t len )
+_free_page_range( phys_addr_t addr, size_t len )
 {
 #ifdef KERNEL
 
@@ -198,7 +197,8 @@ _free_page_range( uint64_t addr, size_t len )
 void
 init( const multiboot_info_t *boot_info )
 {
-	uint64_t mem_available = 0, first_free = 0, first_chunk_above_1mb = 0, last_chunk_end = 0;
+	uint64_t mem_available = 0;
+	phys_addr_t first_free = 0, first_chunk_above_1mb = 0, last_chunk_end = 0;
 	multiboot_memory_map_t *mem_map;
 
 	/* I should go and kill one of the multiboot spec authors..
@@ -206,7 +206,7 @@ init( const multiboot_info_t *boot_info )
 	 */
 	log::printk( "loader provided memory map:\n" );
 	log::printk( "-----------------------------------------\n" );
-	mem_map = ( multiboot_memory_map_t* )( ( uint64_t ) boot_info->mmap_addr );
+	mem_map = ( multiboot_memory_map_t* )( ( uintptr_t ) boot_info->mmap_addr );
 	do
 	{
 		if( mem_map->type == MULTIBOOT_MEMORY_AVAILABLE )
@@ -241,7 +241,7 @@ init( const multiboot_info_t *boot_info )
 		mem_map = ( multiboot_memory_map_t* )( ( uintptr_t )mem_map + mem_map->size + sizeof( mem_map->size ) );
 	} while( ( uintptr_t)mem_map < boot_info->mmap_addr + boot_info->mmap_length );
 
-	memory_map_size = last_chunk_end / PAGE_SIZE / 8;
+	_memory_map_size = last_chunk_end / PAGE_SIZE / 8;
 	/* memory_upper_bound should be the end of the physical address space
 	 * the line below makes it the last *usable* physical memory. */
 	/* memory_upper_bound = last_chunk_end; */
@@ -257,8 +257,8 @@ init( const multiboot_info_t *boot_info )
 
 	log::printk( "-----------------------------------------\n" );
 	log::printk( "%lu MB usable RAM\n", mem_available / 0x100000 );
-	log::printk( "%u KB required for physical bitmap\n", memory_map_size / 1024 );
-	log::printk( "%lu MB required for page map data\n", sizeof( page_map_t ) * memory_map_size * 8 / 1024 / 1024 );
+	log::printk( "%u KB required for physical bitmap\n", _memory_map_size / 1024 );
+	log::printk( "%lu MB required for page map data\n", sizeof( page_map_t ) * _memory_map_size * 8 / 1024 / 1024 );
 	log::printk( "-----------------------------------------\n" );
 
 	/* check for the first free location that has enough space */
@@ -274,33 +274,33 @@ init( const multiboot_info_t *boot_info )
 				first_free = mod_list[i].mod_end;
 				if( ( uintptr_t )mod_list[i].cmdline > first_free )
 				{
-					const char* cmdline = ( const char* )( ( uintptr_t )mod_list[i].cmdline );
+					auto cmdline = ( const char* )( ( uintptr_t )mod_list[i].cmdline );
 					first_free = mod_list[i].cmdline + strlen( cmdline );
 				}
 			}
 		}
 	}
 
-	uint32_t page_map_size = sizeof( page_map_t ) * memory_map_size * 8;
-	if( first_free + memory_map_size + page_map_size > first_chunk_above_1mb )
+	auto page_map_size = sizeof( page_map_t ) * _memory_map_size * 8;
+	if( first_free + _memory_map_size + page_map_size > first_chunk_above_1mb )
 	{
 		// FIXME: I need a panic() method!
 		log::printk( "\nPANIC: not enough free RAM to initialize memory bitmap!\n" );
 		do {} while( 1 );
 	}
-	first_free += sizeof( uint64_t );
-	memory_map_data = ( uint32_t* )first_free;
-	memory_map_pages = ( page_map_t* )( first_free + memory_map_size );
+	first_free += sizeof( phys_addr_t );
+	_memory_map_data = ( uint32_t* )first_free;
+	memory_map_pages = ( page_map_t* )( first_free + _memory_map_size );
 
-	memory_map_used = memory_map_size * 8;
+	_memory_map_used = _memory_map_size * 8;
 
-	memset( memory_map_data, 0xff, memory_map_size );
+	memset( _memory_map_data, 0xff, _memory_map_size );
 
-	first_free += memory_map_size + page_map_size + PAGE_SIZE;
+	first_free += _memory_map_size + page_map_size + PAGE_SIZE;
 	first_free &= 0x7ffff000;
 
 	/* second iteration, mark non-reserved memory above first_free as available */
-	mem_map = ( multiboot_memory_map_t* )( ( uint64_t ) boot_info->mmap_addr );
+	mem_map = ( multiboot_memory_map_t* )( ( uintptr_t ) boot_info->mmap_addr );
 	do
 	{
 		if( mem_map->addr < first_free && 
@@ -327,104 +327,101 @@ init( const multiboot_info_t *boot_info )
 	log::printk( "Physical memory map at %p\n"
 	             "Page metadata map at %p\n"
 	             "-- %u entries, %u free (spanning %lu MB)\n",
-	             memory_map_data,
+	             _memory_map_data,
 	             memory_map_pages,
-	             memory_map_size * 8,
-	             memory_map_size * 8 - memory_map_used,
-	             ( (uint64_t) PAGE_SIZE * ( memory_map_size * 8 - memory_map_used ) / 0x100000 ) );
+	             _memory_map_size * 8,
+	             _memory_map_size * 8 - _memory_map_used,
+	             ( (uintptr_t) PAGE_SIZE * ( _memory_map_size * 8 - _memory_map_used ) / 0x100000 ) );
 }
 
 #endif
 
 void
-set_physical_base_offset( const uint64_t offset )
+set_physical_base_offset( const phys_addr_t offset )
 {
 	/* change the expected location of the memory map and set the offset for
 	 * physical addresses used alloc_page() and free_page()
 	 */
-	memory_map_data  = ( uint32_t* )( ( uintptr_t )memory_map_data - memory_map_base + offset );
-	memory_map_pages = ( page_map_t* )( ( uintptr_t )memory_map_pages - memory_map_base + offset );
-	memory_map_base  = offset;
+	_memory_map_data  = ( uint32_t* )( ( uintptr_t )_memory_map_data - _memory_map_base + offset );
+	memory_map_pages = ( page_map_t* )( ( uintptr_t )memory_map_pages - _memory_map_base + offset );
+	_memory_map_base  = offset;
 
-	log::printk( "Physical memory map relocated to %p\n", memory_map_data );
+	log::printk( "Physical memory map relocated to %p\n", _memory_map_data );
 	log::printk( "Page metadata map relocated to %p\n", memory_map_pages );
 }
 
-uint64_t 
+phys_addr_t 
 physical_base_offset( void )
 {
-	return memory_map_base;
+	return _memory_map_base;
 }
 
 uint32_t
 free_page_count( void )
 {
-	return memory_map_size * 8 - memory_map_used;
+	return _memory_map_size * 8 - _memory_map_used;
 }
 
 void*
 alloc_page( PhysPageFlagSet flags )
 {
-	uint64_t addr;
+	phys_addr_t addr;
+	scoped_lock lock( _memory_map_lock );
 
-	memory_map_lock.lock();
 	if( free_page_count() == 0 )
 	{
-		memory_map_lock.unlock();
 		return nullptr;
 	}
 	addr = _search_first_free();
 	if( addr == 0 )
 	{
-		memory_map_lock.unlock();
 		return nullptr;
 	}
 
 	_mark_used_range( addr, PAGE_SIZE );
 	_flag_page_range( addr, flags, PAGE_SIZE );
-	memory_map_lock.unlock();
 
-	return ( void* )( addr + memory_map_base );
+	return ( void* )( addr + _memory_map_base );
 }
 
 void*
 alloc_page_range( unsigned count, PhysPageFlagSet flags )
 {
-	uint64_t addr;
+	phys_addr_t addr;
 
 	if( count <= 1 )
 	{
 		return alloc_page( flags );
 	}
 
-	memory_map_lock.lock();
-	if( count < 1 || free_page_count() < count )
 	{
-		memory_map_lock.unlock();
-		return nullptr;
-	}
-	addr = _search_first_free_range( count );
-	if( addr == 0 )
-	{
-		memory_map_lock.unlock();
-		return nullptr;
+		scoped_lock lock( _memory_map_lock );
+
+		if( count < 1 || free_page_count() < count )
+		{
+			return nullptr;
+		}
+		addr = _search_first_free_range( count );
+		if( addr == 0 )
+		{
+			return nullptr;
+		}
+
+		_mark_used_range( addr, PAGE_SIZE * count );
+		_flag_page_range( addr, flags, PAGE_SIZE * count );
 	}
 
-	_mark_used_range( addr, PAGE_SIZE * count );
-	_flag_page_range( addr, flags, PAGE_SIZE * count );
-	memory_map_lock.unlock();
-
-	return ( void* )( addr + memory_map_base );
+	return ( void* )( addr + _memory_map_base );
 }
 
 void
 free_page( const void* page )
 {
-	uint64_t addr = ( uint64_t )page;
+	phys_addr_t addr = ( phys_addr_t )page;
 
-	if( addr >= memory_map_base )
+	if( addr >= _memory_map_base )
 	{
-		addr -= memory_map_base;
+		addr -= _memory_map_base;
 	}
 
 	if( addr < PAGE_SIZE )
@@ -432,26 +429,26 @@ free_page( const void* page )
 		/* prevent freeing of the first 4K */
 		return;
 	}
-	if( addr / PAGE_SIZE / 32 + addr / PAGE_SIZE % 32 > memory_map_size * 8 )
+	if( addr / PAGE_SIZE / 32 + addr / PAGE_SIZE % 32 > _memory_map_size * 8 )
 	{
 		/* prevent out-of-bounds access */
 		return;
 	}
 
-	memory_map_lock.lock();
+	_memory_map_lock.lock();
 	_mark_free_range( addr, PAGE_SIZE );
 	_free_page_range( addr, PAGE_SIZE );
-	memory_map_lock.unlock();
+	_memory_map_lock.unlock();
 }
 
 void
 free_page_range( const void* page, unsigned count )
 {
-	uint64_t addr = ( uint64_t )page;
+	phys_addr_t addr = ( phys_addr_t )page;
 
-	if( addr >= memory_map_base )
+	if( addr >= _memory_map_base )
 	{
-		addr -= memory_map_base;
+		addr -= _memory_map_base;
 	}
 
 	if( addr < PAGE_SIZE )
@@ -466,8 +463,8 @@ free_page_range( const void* page, unsigned count )
 	}
 
 	do {
-		uint64_t end_addr = addr + count * PAGE_SIZE;
-		if( end_addr / PAGE_SIZE / 32 + end_addr / PAGE_SIZE % 32 < memory_map_size * 8 )
+		phys_addr_t end_addr = addr + count * PAGE_SIZE;
+		if( end_addr / PAGE_SIZE / 32 + end_addr / PAGE_SIZE % 32 < _memory_map_size * 8 )
 		{
 			/* prevent out-of-bounds access */
 			break;
@@ -477,17 +474,17 @@ free_page_range( const void* page, unsigned count )
 
 	if( count )
 	{
-		memory_map_lock.lock();
+		_memory_map_lock.lock();
 		_mark_free_range( addr, count * PAGE_SIZE );
 		_free_page_range( addr, count * PAGE_SIZE );
-		memory_map_lock.unlock();
+		_memory_map_lock.unlock();
 	}
 }
 
 page_map_t*
-get_page_map( uint64_t paddr )
+get_page_map( phys_addr_t paddr )
 {
-	return ( ( paddr >> PAGE_SHIFT ) < memory_map_size ) ? &memory_map_pages[ paddr >> 12 ]
+	return ( ( paddr >> PAGE_SHIFT ) < _memory_map_size ) ? &memory_map_pages[ paddr >> 12 ]
 	                                                     : nullptr;
 }
 

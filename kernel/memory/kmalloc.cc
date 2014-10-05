@@ -22,8 +22,7 @@
 /* kmalloc / kfree / krealloc */
 
 #include <string.h>
-#include <stdint.h>
-#include <stddef.h>
+#include <hotarubi/types.h>
 
 #include <hotarubi/memory/cache.h>
 #include <hotarubi/log/log.h>
@@ -34,7 +33,7 @@ struct kmalloc_cache
 	memory::cache::mem_cache_t cache;
 };
 
-static struct kmalloc_cache kmalloc_cache_table[] = {
+static kmalloc_cache _kmalloc_cache_table[] = {
 	{    32, nullptr },
 	{    64, nullptr },
 	{   128, nullptr },
@@ -51,7 +50,7 @@ static struct kmalloc_cache kmalloc_cache_table[] = {
 	{     0, nullptr }
 };
 
-static const char *kmalloc_cache_names[] = {
+static const char *_kmalloc_cache_names[] = {
 	"kmalloc::size-32",
 	"kmalloc::size-64",
 	"kmalloc::size-128",
@@ -68,31 +67,31 @@ static const char *kmalloc_cache_names[] = {
 };
 
 
-static inline struct kmalloc_cache*
+static inline kmalloc_cache*
 _lookup_cache_for_ptr( void *ptr )
 {
-	memory::cache::mem_cache_t cache = memory::cache::get_cache( ptr );
+	auto cache = memory::cache::get_cache( ptr );
 	if( cache != nullptr )
 	{
-		for( size_t i = 0; kmalloc_cache_table[i].size; ++i )
+		for( size_t i = 0; _kmalloc_cache_table[i].size; ++i )
 		{
-			if( cache == kmalloc_cache_table[i].cache )
+			if( cache == _kmalloc_cache_table[i].cache )
 			{
-				return &kmalloc_cache_table[i];
+				return &_kmalloc_cache_table[i];
 			}
 		}
 	}
 	return nullptr;
 }
 
-static inline struct kmalloc_cache*
+static inline kmalloc_cache*
 _lookup_cache_for_size( size_t n )
 {
-	for( size_t i = 0; kmalloc_cache_table[i].size; ++i )
+	for( size_t i = 0; _kmalloc_cache_table[i].size; ++i )
 	{
-		if( n + sizeof( uintptr_t ) <= kmalloc_cache_table[i].size )
+		if( n + sizeof( uintptr_t ) <= _kmalloc_cache_table[i].size )
 		{
-			return &kmalloc_cache_table[i];
+			return &_kmalloc_cache_table[i];
 		}
 	}
 	return nullptr;
@@ -101,7 +100,7 @@ _lookup_cache_for_size( size_t n )
 void*
 kmalloc( size_t n )
 {
-	struct kmalloc_cache *cache = _lookup_cache_for_size( n );
+	auto cache = _lookup_cache_for_size( n );
 	if( cache != nullptr )
 	{
 		return ( void* )memory::cache::get_object( cache->cache );
@@ -119,7 +118,7 @@ kfree( void *ptr )
 		return;
 	}
 
-	memory::cache::mem_cache_t cache = memory::cache::get_cache( ptr );
+	auto cache = memory::cache::get_cache( ptr );
 	if( cache != nullptr )
 	{
 		memory::cache::put_object( cache, ptr );
@@ -137,7 +136,7 @@ krealloc( void *ptr, size_t n )
 		return kmalloc( n );
 	}
 
-	struct kmalloc_cache *cache = _lookup_cache_for_ptr( ptr );
+	auto cache = _lookup_cache_for_ptr( ptr );
 	if( cache != nullptr )
 	{
 		void *res = kmalloc( n );
@@ -161,17 +160,16 @@ namespace kmalloc
 void
 init( void )
 {
-	memory::cache::mem_cache_t cache = nullptr;
-	for( size_t i = 0; kmalloc_cache_table[i].size; ++i )
+	for( size_t i = 0; _kmalloc_cache_table[i].size; ++i )
 	{
-		bool overflow_check = ( kmalloc_cache_table[i].size < 1024 );
+		bool overflow_check = ( _kmalloc_cache_table[i].size < 1024 );
 
-		cache = memory::cache::create( kmalloc_cache_names[i],
-		                               kmalloc_cache_table[i].size + sizeof( uintptr_t ),
-		                               16, overflow_check );
-		if( cache )
+		auto cache = memory::cache::create( _kmalloc_cache_names[i],
+		                                    _kmalloc_cache_table[i].size + sizeof( uintptr_t ),
+		                                    16, overflow_check );
+		if( cache != nullptr )
 		{
-			kmalloc_cache_table[i].cache = cache;
+			_kmalloc_cache_table[i].cache = cache;
 		}
 	}
 }

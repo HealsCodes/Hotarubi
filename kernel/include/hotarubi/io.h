@@ -24,7 +24,7 @@
 #ifndef __IO_H
 #define __IO_H 1
 
-#include <stdint.h>
+#include <hotarubi/types.h>
 
 namespace io
 {

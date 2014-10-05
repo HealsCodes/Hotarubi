@@ -20,11 +20,11 @@
 *******************************************************************************/
 
 /*  */
+
 #ifndef _LOG_H
 #define _LOG_H 1
 
-#include <stdint.h>
-#include <stddef.h>
+#include <hotarubi/types.h>
 
 #define __UNDER_CONSTRUCTION__ do { \
     	log::printk( "\n\n-- reached under construction area in %s:%d, idling --\n ", \

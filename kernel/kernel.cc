@@ -21,11 +21,12 @@
 
 /* high-level language kernel-entry and main initialization */
 
-#include <stdint.h>
-#include <hotarubi/boot/multiboot.h>
-#include <hotarubi/log/log.h>
+#include <hotarubi/types.h>
 #include <hotarubi/memory.h>
+#include <hotarubi/log/log.h>
 #include <hotarubi/processor.h>
+#include <hotarubi/boot/multiboot.h>
+
 #include <hotarubi/release.h>
 
 extern "C" void _init( void );

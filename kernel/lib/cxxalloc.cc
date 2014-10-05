@@ -21,7 +21,7 @@
 
 /* C++ new / delete operators */
 
-#include <stdint.h>
+#include <hotarubi/types.h>
 #include <hotarubi/memory/kmalloc.h>
 
 void*

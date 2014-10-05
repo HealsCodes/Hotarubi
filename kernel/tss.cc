@@ -49,6 +49,7 @@ init( void )
 	else
 	{
 		/* AP - allocate dynamically */
+		tss = new struct tss;
 	}
 
 	memset( tss, 0, sizeof( struct tss ) );

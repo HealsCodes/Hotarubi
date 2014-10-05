@@ -22,13 +22,13 @@
 /* Global Descriptor Table manipulation */
 
 #include <string.h>
+
 #include <hotarubi/gdt.h>
 #include <hotarubi/tss.h>
 #include <hotarubi/processor.h>
 #include <hotarubi/macros.h>
 
 LOCAL_DATA_INC( hotarubi/gdt.h );
-
 LOCAL_DATA_DEF( struct gdt::gdt_descriptor gdt[GDT_DESCRIPTOR_COUNT] );
 
 #define IA32_GS_BASE 0xc0000101
@@ -36,7 +36,7 @@ LOCAL_DATA_DEF( struct gdt::gdt_descriptor gdt[GDT_DESCRIPTOR_COUNT] );
 namespace gdt
 {
 
-static struct gdt_pointer    gdtr;
+static struct gdt_pointer _gdtr;
 
 static void
 _setup_descriptor( struct gdt_descriptor *gdt,
@@ -44,7 +44,7 @@ _setup_descriptor( struct gdt_descriptor *gdt,
                    GDTTypeSet type, GDTSizeFlagsSet flags )
 {
 	/* FIXME: check index for gdt bounds */
-	struct gdt_descriptor *descr = &gdt[index];
+	auto descr = &gdt[index];
 
 	memset( descr, 0, sizeof( struct gdt_descriptor ) );
 
@@ -65,7 +65,7 @@ _setup_extended_descriptor( struct gdt_descriptor *gdt,
                             GDTTypeSet type, GDTSizeFlagsSet flags )
 {
 	/* FIXME: check index for gdt bounds */
-	struct gdt_descriptor_extended *descr = ( struct gdt_descriptor_extended* )&gdt[index];
+	auto descr = ( struct gdt_descriptor_extended* )&gdt[index];
 
 	memset( descr, 0, sizeof( struct gdt_descriptor_extended ) );
 
@@ -86,8 +86,8 @@ static void
 _setup_tss_descriptor( struct gdt_descriptor *gdt, unsigned index,
                        struct tss::tss *tss )
 {
-	uintptr_t base = ( uintptr_t )tss;
-	uint32_t  limit = sizeof( struct tss::tss ) - 1;
+	auto base  = ( uintptr_t )tss;
+	auto limit = sizeof( struct tss::tss ) - 1;
 
 	_setup_extended_descriptor( gdt, index, base, limit, 
 	                            kGDTTypeTSS | kGDTPresent | kGDTAccessUsr,
@@ -97,8 +97,8 @@ _setup_tss_descriptor( struct gdt_descriptor *gdt, unsigned index,
 void
 init( void )
 {
-	struct processor::local_data *local_data = processor::local_data();
-	struct gdt_descriptor *gdt = local_data->gdt;
+	auto local_data = processor::local_data();
+	auto gdt = local_data->gdt;
 
 	memset( gdt, 0, sizeof( struct gdt_descriptor ) * GDT_DESCRIPTOR_COUNT );
 
@@ -112,13 +112,13 @@ init( void )
 
 	_setup_tss_descriptor( gdt, 5, local_data->tss );
 
-	memset( &gdtr, 0, sizeof( struct gdt_pointer ) );
+	memset( &_gdtr, 0, sizeof( struct gdt_pointer ) );
 
-	gdtr.limit   = sizeof( struct gdt_descriptor ) * GDT_DESCRIPTOR_COUNT - 1;
-	gdtr.address = ( uintptr_t )gdt;
+	_gdtr.limit   = sizeof( struct gdt_descriptor ) * GDT_DESCRIPTOR_COUNT - 1;
+	_gdtr.address = ( uintptr_t )gdt;
 
 	/* reload the GDT */
-	__asm__ __volatile__( "lgdt (%0)" :: "r"( &gdtr ) );
+	__asm__ __volatile__( "lgdt (%0)" :: "r"( &_gdtr ) );
 	
 	/* update data segments (but keep GS.base) */
 	__asm__ __volatile__(

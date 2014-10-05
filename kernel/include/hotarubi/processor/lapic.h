@@ -24,20 +24,13 @@
 #ifndef __PROCESSOR_LAPIC_H
 #define __PROCESSOR_LAPIC_H 1
 
-#include <stdint.h>
+#include <hotarubi/types.h>
 #include <hotarubi/memory/mmio.h>
 #include <hotarubi/processor/interrupt.h>
 
 namespace processor
 {
-	/* we need to:
-	 * - configure lint# as NMI
-	 * - calibrate the timer frequency
-	 * - start single-shot and repeating timers
-	 * - stop a running timer
-	 * - mask and unmask interrupts
-	 * - send an IPI [to another LAPIC|to shorthand addresses]
-	 */
+	/* TODO: send an IPI [to another LAPIC|to shorthand addresses] */
 
 	class lapic
 	{

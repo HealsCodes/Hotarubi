@@ -30,9 +30,9 @@ namespace log
 };
 
 #define SET_MEMORY_MAP( map, used ) do { \
-		memory::physmm::memory_map_data = map; \
-		memory::physmm::memory_map_size = sizeof( map ); \
-		memory::physmm::memory_map_used = used; \
+		memory::physmm::_memory_map_data = map; \
+		memory::physmm::_memory_map_size = sizeof( map ); \
+		memory::physmm::_memory_map_used = used; \
 	} while( 0 )
 
 #define NO_FLAGS __PPF( Unused )

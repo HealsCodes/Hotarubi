@@ -22,8 +22,7 @@
 #ifndef __MEMORY_CACHE_H
 #define __MEMORY_CACHE_H 1
 
-#include <stddef.h>
-
+#include <hotarubi/types.h>
 #include <hotarubi/memory/const.h>
 
 namespace memory
