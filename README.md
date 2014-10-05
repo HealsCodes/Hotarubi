@@ -15,7 +15,7 @@ In this case the files should be considered to be licensed as stated in COPYING.
 (These files are mostly in-development code which I consider unstable or that I'm currently   
 working on.)
 
-## Building [![Build Status](https://travis-ci.org/Shirk/Hotarubi.svg?branch=master)](https://travis-ci.org/Shirk/Hotarubi) ##
+## Building [![Build Status](https://travis-ci.org/Shirk/Hotarubi.svg?branch=kyushu_dev)](https://travis-ci.org/Shirk/Hotarubi) ##
 
 ほたるび uses [Rake][1] as the build system of choice.   
 In addition to that a working C/C++ compiler is required to build the needed tools.
