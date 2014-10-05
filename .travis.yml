@@ -14,8 +14,6 @@ before_install:
 - sudo apt-get -qq install automake
 - sudo apt-get -qq install g++-4.8
 - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90
-- gcc --version
-- aclocal --version
 - openssl aes-256-cbc -K $encrypted_2d08df12a66b_key -iv $encrypted_2d08df12a66b_iv -in scripts/travis-store.key.enc -out scripts/travis-store.key -d
 - chmod 0600 scripts/travis-store.key
 before_script: rake travis:prepare
@@ -23,6 +21,7 @@ script: rake travis:run_build
 branches:
   only:
   - master
+  - kyushu_dev
 env:
   matrix:
   - RVM_VERSION=2.0.0 LANG="en_US.UTF-8" 
