@@ -45,6 +45,13 @@ namespace processor
 			kLAPICInterruptError   = 6,
 		};
 
+		enum LAPICBroadcast : uint32_t
+		{
+			kLAPICBroadcastAll     = 0x80000,
+			kLAPICBroadcastOthers  = 0xc0000,
+			kLAPICBroadcastSelf    = 0x40000,
+		};
+
 		lapic( uint8_t id, uint32_t address );
 		~lapic();
 
@@ -63,6 +70,13 @@ namespace processor
 		void set_nmi( unsigned lint_no, IRQTriggerMode trigger, IRQPolarity polarity );
 		void clr_nmi( unsigned lint_no );
 
+		void send_ipi( uint8_t target, uint8_t vector );
+		void send_sipi( uint8_t target, uint8_t boot_vector );
+		void send_init( uint8_t target );
+
+		void broadcast_ipi( LAPICBroadcast mode, uint8_t vector );
+		void broadcast_init( LAPICBroadcast mode );
+
 		void eoi( void );
 
 		uint8_t id( void ) const { return _id; };
@@ -70,6 +84,9 @@ namespace processor
 
 	private:
 		uint32_t _irq_flags( IRQTriggerMode trigger, IRQPolarity polarity );
+
+		void _send_ipi( uint8_t target, LAPICBroadcast mode,
+		                uint16_t delivery, uint8_t vector );
 
 		uint32_t _read( uint16_t reg );
 		void _write( uint16_t reg, uint32_t val );

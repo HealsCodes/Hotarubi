@@ -73,6 +73,7 @@ enum LAPICDelivery : uint16_t
 	kLAPICDeliverNMI    = 0x400,
 	kLAPICDeliverExtINT = 0x700,
 	kLAPICDeliverINIT   = 0x500,
+	kLAPICDeliverSIPI   = 0xc00,
 };
 
 static volatile bool _calibrated = false;
@@ -309,6 +310,36 @@ lapic::set_mask( LAPICInterrupt source, bool masked )
 }
 
 void
+lapic::send_ipi( uint8_t target, uint8_t vector )
+{
+	_send_ipi( target, LAPICBroadcast( 0 ), kLAPICDeliverFixed, vector );
+}
+
+void
+lapic::send_sipi( uint8_t target, uint8_t boot_vector )
+{
+	_send_ipi( target, LAPICBroadcast( 0 ), kLAPICDeliverSIPI, boot_vector );
+}
+
+void
+lapic::send_init( uint8_t target )
+{
+	_send_ipi( target, LAPICBroadcast( 0 ), kLAPICDeliverINIT, 0 );
+}
+
+void
+lapic::broadcast_ipi( LAPICBroadcast mode, uint8_t vector )
+{
+	_send_ipi( 0, mode, kLAPICDeliverFixed, vector );
+}
+
+void
+lapic::broadcast_init( LAPICBroadcast mode )
+{
+	_send_ipi( 0, mode, kLAPICDeliverINIT, 0 );
+}
+
+void
 lapic::eoi( void )
 {
 	_write( kLAPICEOI, 0 );
@@ -348,6 +379,52 @@ lapic::_irq_flags( IRQTriggerMode trigger, IRQPolarity polarity )
 			break;
 	}
 	return res;
+}
+
+void
+lapic::_send_ipi( uint8_t target, LAPICBroadcast mode, uint16_t delivery,
+                  uint8_t vector )
+{
+	uint32_t ipi_lo = 0, ipi_hi = 0;
+
+	switch( mode )
+	{
+		case kLAPICBroadcastAll:
+		case kLAPICBroadcastSelf:
+		case kLAPICBroadcastOthers:
+			ipi_lo |= mode;
+		break;
+
+		default:
+		ipi_hi = ( ( uint32_t )target << 24 );
+		break;
+	}
+
+	ipi_lo |= delivery;
+
+	switch( (LAPICDelivery)delivery )
+	{
+		case kLAPICDeliverFixed: /* FALL_THROUGH */
+		case kLAPICDeliverSIPI:
+			ipi_lo |= vector;
+		break;
+
+		case kLAPICDeliverSMI: /* FALL_THROUGH */
+		case kLAPICDeliverNMI: /* FALL_THROUGH */
+		case kLAPICDeliverINIT:
+			/* no vector / vector should be 00 */
+		break;
+
+		case kLAPICDeliverExtINT:
+			/* no-op, reserved */
+		return;
+	}
+
+	if( ipi_hi )
+	{
+		_write( kLAPICInterruptCmdHi, ipi_hi );
+	}
+	_write( kLAPICInterruptCmdLo, ipi_lo );
 }
 
 uint32_t
