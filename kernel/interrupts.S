@@ -1,19 +1,19 @@
 /*******************************************************************************
 
     Copyright (C) 2014  René 'Shirk' Köcher
- 
+
     This file is part of Hotarubi.
 
     Hotarubi is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
- 
+
     Hotarubi is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
- 
+
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -42,7 +42,7 @@ _interrupt_stub_\nr:
 		jmp *%rax
 	.endif
 	/* align to force equal sized stubs */
-	.align 16
+	.align 64
 .endm
 
 .macro interrupt_stub_base
@@ -55,7 +55,7 @@ _interrupt_stub_\nr:
 		lea L_interrupt_swapgs_fast, %rax
 		jmp *%rax
 	/* align to force equal sized stubs */
-	.align 16
+	.align 64
 .endm
 
 .macro interrupt_call_up
@@ -93,7 +93,7 @@ _interrupt_stub_\nr:
 
 	/* locate the correct RIP */
 	lea   _interrupt_pointer_table, %rbx
-	movq  16(%rbp), %rcx            /* 16(rbp) is the irq number */
+	movq  16(%rbp), %rcx           /* 16(rbp) is the irq number */
 	movq  0(%rbx, %rcx, 8), %rax   /* offset %rcx into %rbx for the handler RIP */
 
 	/* up call to the kernel */
@@ -169,13 +169,13 @@ _interrupt_stub_size:
 L_interrupt_swapgs_fast:
 	popq %rax
 	/* 'fast path' - check CS on the stack */
-	cmp $0x08, 24(%rsp)
+	cmp $0x08, 32(%rsp)
 	je  1f
 	swapgs
 1:
 	interrupt_call_up
 
-	cmp $0x08, 8(%rsp) /* 24 - irq_nr - error_code = 8 */
+	cmp $0x08, 8(%rsp) /* 32 - irq_nr - user_context - error_code = 8 */
 	je  2f
 	swapgs
 2:
