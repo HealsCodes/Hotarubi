@@ -46,7 +46,6 @@ namespace processor
 #define IA32_KERNEL_GSBASE 0xc0000102
 
 LOCAL_DATA_DEF( uint8_t id );
-LOCAL_DATA_DEF( uint8_t id_[7] );
 
 static spin_lock processor_accounting_lock;
 static unsigned processor_active_count = 0;
