@@ -26,6 +26,8 @@
 #include <hotarubi/macros.h>
 #include <hotarubi/log/log.h>
 #include <hotarubi/idt.h>
+#include <hotarubi/io.h>
+#include <hotarubi/processor/core.h>
 #include <hotarubi/processor/regs.h>
 #include <hotarubi/memory/page.h>
 
@@ -72,6 +74,8 @@ enum LAPICDelivery : uint16_t
 	kLAPICDeliverExtINT = 0x700,
 	kLAPICDeliverINIT   = 0x500,
 };
+
+static volatile bool _calibrated = false;
 
 lapic::lapic( uint8_t id, uint32_t address )
 : _init_id{id}, _init_addr{address}
@@ -153,13 +157,34 @@ lapic::init( void )
 			}
 		}
 	}
+	eoi();
 }
 
 void
 lapic::calibrate( void )
 {
+	/* reset ticks/msec, set the counter to max and a divider of 1 */
+	_calibrated = false;
+	_ticks_per_msec = 1;
 	_write( kLAPICTimerDivider, ( _read( kLAPICTimerDivider ) & 0xfffffff0 ) | 0x0b );
-	__UNDER_CONSTRUCTION__;
+
+	timer()->one_shot( 1_ms, [](){ _calibrated = true; } );
+	set_timer( 0xffffffff, false );
+
+	/* poll until the PIT has fired */
+	while( _calibrated == false )
+	{
+		__asm__ __volatile__( "hlt" );
+	}
+
+	auto current = _read( kLAPICTimerCurrentCount );
+	set_mask( kLAPICInterruptTimer, true );
+
+	_ticks_per_msec = ( 0xffffffff - current + 1 );
+	_ticks_per_msec = ( _ticks_per_msec > 0 ) ? _ticks_per_msec : 1;
+
+	log::printk( "LAPIC %d: %u ticks/ms\n", _id, _ticks_per_msec );
+	eoi();
 }
 
 void
@@ -205,7 +230,7 @@ lapic::set_timer( unsigned msec, bool repeat )
 
 	uint32_t lvt = ( _read( kLAPICLvtTimer ) & ~( 1 << 16 ) ) | ( repeat << 17 );
 	_write( kLAPICLvtTimer,  lvt );
-	_write( kLAPICTimerInitialCount, msec * _ticks_per_msec );
+	_write( kLAPICTimerInitialCount, msec / 1_ms * _ticks_per_msec );
 }
 
 void
@@ -281,6 +306,12 @@ lapic::set_mask( LAPICInterrupt source, bool masked )
 	{
 		_write( reg, _read( reg ) & ~( 1 << 16 ) );
 	}
+}
+
+void
+lapic::eoi( void )
+{
+	_write( kLAPICEOI, 0 );
 }
 
 uint32_t

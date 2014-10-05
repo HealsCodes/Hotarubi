@@ -70,6 +70,8 @@ namespace processor
 		void set_nmi( unsigned lint_no, IRQTriggerMode trigger, IRQPolarity polarity );
 		void clr_nmi( unsigned lint_no );
 
+		void eoi( void );
+
 		uint8_t id( void ) const { return _id; };
 		uint8_t version( void ) const { return _version; };
 

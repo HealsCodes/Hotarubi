@@ -24,7 +24,9 @@
 #ifndef __PROCESSOR_CORE_H
 #define __PROCESSOR_CORE_H 1
 
-#include <stdint.h>
+#include <hotarubi/types.h>
+
+#include <hotarubi/processor/pit.h>
 #include <hotarubi/processor/interrupt.h>
 
 namespace processor
@@ -71,7 +73,12 @@ namespace processor
 	bool is_bsp( void );
 
 	struct interrupt *irqs( void );
+	struct interrupt *irqs( unsigned n );
+
+	bool route_isa_irq( uint8_t source, uint8_t target );
 	bool set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity );
+
+	pit *timer( void );
 };
 
 #endif

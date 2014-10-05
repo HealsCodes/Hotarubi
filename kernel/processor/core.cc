@@ -25,6 +25,7 @@
 
 #include <hotarubi/processor/core.h>
 #include <hotarubi/processor/regs.h>
+#include <hotarubi/processor/pit.h>
 #include <hotarubi/processor/ioapic.h>
 #include <hotarubi/processor/lapic.h>
 #include <hotarubi/processor/interrupt.h>
@@ -57,6 +58,7 @@ uint32_t          ioapic_count   = 0;
 
 /* local dynamic data */
 interrupt         *interrupts    = nullptr;
+pit               *pit_timer     = nullptr;
 /* these will be initialized by ACPI */
 struct local_data *ap_local_data = nullptr;
 ioapic            *ioapics       = nullptr;
@@ -105,6 +107,31 @@ irqs( void )
 	return interrupts;
 }
 
+struct interrupt*
+irqs( unsigned n )
+{
+	return ( n < NUM_IRQ_ENTRIES ) ? &irqs()[n] : nullptr;
+}
+
+bool
+route_isa_irq( uint8_t source, uint8_t target )
+{
+	auto irq = irqs( source );
+
+	for( unsigned i = 0; i < ioapic_count; ++i )
+	{
+		if( ioapics[i].start() <= irq->target &&
+		    ioapics[i].range() >= irq->target )
+		{
+			ioapics[i].set_route( irq->target, target, irq->trigger, irq->polarity );
+			ioapics[i].set_mask( irq->target, false );
+			return true;
+		}
+	}
+	log::printk( "No IOAPIC to route ISA interrupt %u!\n", source );
+	return false;
+}
+
 bool
 set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity )
 {
@@ -126,6 +153,12 @@ set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity )
 		}
 	}
 	return false;
+}
+
+pit*
+timer( void )
+{
+	return pit_timer;
 }
 
 void
@@ -163,14 +196,22 @@ init( void )
 	{
 		acpi::init_tables();
 		acpi::parse_madt( ap_local_data, core_count, ioapics, ioapic_count );
-	}
 
-	if( local_data()->lapic )
-	{
+		if( local_data()->lapic == nullptr )
+		{
+			log::printk( "No LAPIC available and this is the bootstrap processor!\n" );
+			do{}while( 1 );
+		}
+
 		local_data()->lapic->init();
+		pit_timer = new pit;
+		pit_timer->init();
 	}
 
 	enable_interrupts();
+
+	local_data()->lapic->init(); /* no-op if called twice from BSP */
+	local_data()->lapic->calibrate();
 }
 
 };
