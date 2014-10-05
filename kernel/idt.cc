@@ -36,8 +36,8 @@
 #define IDT_STUB_NR_MAGIC  0xdeadbeef
 #define IDT_STUB_CX_MAGIC  0x0badf00d
 
-#define IDT_STUB_FN_SLOWGS ( (uint32_t)( ( uintptr_t )L_interrupt_swapgs_fast ) & 0xffffffff )
-#define IDT_STUB_FN_FASTGS ( (uint32_t)( ( uintptr_t )L_interrupt_swapgs_slow ) & 0xffffffff )
+#define IDT_STUB_FN_SLOWGS ( (uint32_t)( ( uintptr_t )L_interrupt_swapgs_slow ) & 0xffffffff )
+#define IDT_STUB_FN_FASTGS ( (uint32_t)( ( uintptr_t )L_interrupt_swapgs_fast ) & 0xffffffff )
 
 /* the following are declared in interrupts.S */
 extern "C" uint8_t _interrupt_stub_0[] , _interrupt_stub_1[];
