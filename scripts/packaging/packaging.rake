@@ -2,6 +2,7 @@ require 'tmpdir'
 require 'rake/clean'
 
 GRUB2_EFI_BOOT="#{File.dirname( __FILE__ )}/CD_root/boot/grub/efi.img"
+ISOHYBRID_MBR="#{File.dirname( __FILE__ )}/isohdpfx.bin"
 
 namespace :package do
 
@@ -13,7 +14,6 @@ namespace :package do
 
     rm_r( _CLEAN, :force => true )
   end
-
 
   desc "Generate a bootable ISO image"
   task :iso => [ :kernel, GRUB2_EFI_BOOT ] do
@@ -38,21 +38,34 @@ namespace :package do
                                        -boot-load-size 4               \
                                        -boot-info-table                \
                                        -rock                           \
-                                       --efi-boot boot/grub/efi.img    \
+                                       -isohybrid-mbr #{ISOHYBRID_MBR} \
+                                       -eltorito-alt-boot              \
+                                       -e boot/grub/efi.img            \
+                                       -no-emul-boot                   \
+                                       -isohybrid-gpt-basdat \
                                        "#{cd_root}"}, :verbose => false
     end
   end
 
   file GRUB2_EFI_BOOT do |t|
 
-    grub_modules = %w[ efi_gop efi_uga fat font gfxterm iso9660 multiboot 
-                       multiboot2 normal terminal ]
+    grub_modules = %w[ configfile efi_gop efi_uga fat font gfxterm iso9660
+                       multiboot multiboot2 normal search search_fs_file
+                       terminal ]
+
+    grub_early = <<-EOS
+    search --file --set=root /boot/grub/grub.cfg
+    configfile /boot/grub/grub.cfg
+    EOS
 
     # creation of BOOTX64.efi and the empty image is identical on linux / darwin
     # the rest is completely different..
     Rake::FileUtilsExt.verbose( false )
+    puts "GENCFG   BOOTX64.cfg"
+    open( 'BOOTX64.cfg', 'w' ) { |io| io.write( grub_early ) }
+
     puts "GENEFI   BOOTX64.efi"
-    sh "#{TC[:grubimg]} -O x86_64-efi -o BOOTX64.efi #{grub_modules.join(' ')}"
+    sh "#{TC[:grubimg]} -O x86_64-efi -o BOOTX64.efi -c BOOTX64.cfg #{grub_modules.join(' ')}"
 
     puts "GENIMG   boot/grub/efi.img"
     sh "dd if=/dev/zero of=#{t.name} bs=512 count=2048 2>/dev/null"
@@ -76,6 +89,7 @@ namespace :package do
         sh "mcopy -i #{t.name} BOOTX64.efi ::/EFI/BOOT/BOOTX64.efi"
     end
 
+    rm_f 'BOOTX64.cfg'
     rm_f 'BOOTX64.efi'
     Rake::FileUtilsExt.verbose( true )
   end
