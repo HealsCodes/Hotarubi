@@ -22,12 +22,27 @@ namespace :run do
       # select the platform firmware
       args.with_defaults( :firmware => 'bios', :headless => false )
       fw = args[:firmware]
+      hl = args[:headless]
 
       # prevent toolchain libraries from interfering
       ENV['LD_LIBRARY_PATH'] = ENV['LD_LIBRARY_PATH'].gsub( "#{Dir.pwd}/toolchain/lib:", '' )
       ENV['DYLD_LIBRARY_PATH'] = ENV['DYLD_LIBRARY_PATH'].gsub( "#{Dir.pwd}/toolchain/lib:", '' )
 
-      sh "#{QEMU[:bin]} #{QEMU[:base_flags].join(' ')} #{'-bios OVMF.fd' if fw == 'efi'} #{'-nographic' if args[:headless]} -cdrom hotarubi.iso"
+      sh "#{QEMU[:bin]} #{QEMU[:base_flags].join(' ')} #{'-bios OVMF.fd' if fw == 'efi'} #{'-nographic' if hl == true} -cdrom hotarubi.iso"
+    end
+
+    desc "Run qemu x86-64 using hotarubi.iso in HDD mode (firmware: bios|efi)"
+    task :hdd, [:firmware, :headless] => 'package:iso' do |t, args|
+      # select the platform firmware
+      args.with_defaults( :firmware => 'bios', :headless => false )
+      fw = args[:firmware]
+      hl = args[:headless]
+
+      # prevent toolchain libraries from interfering
+      ENV['LD_LIBRARY_PATH'] = ENV['LD_LIBRARY_PATH'].gsub( "#{Dir.pwd}/toolchain/lib:", '' )
+      ENV['DYLD_LIBRARY_PATH'] = ENV['DYLD_LIBRARY_PATH'].gsub( "#{Dir.pwd}/toolchain/lib:", '' )
+
+      sh "#{QEMU[:bin]} #{QEMU[:base_flags].join(' ')} #{'-bios OVMF.fd' if fw == 'efi'} #{'-nographic' if hl == true} -hda hotarubi.iso"
     end
   end
 end
