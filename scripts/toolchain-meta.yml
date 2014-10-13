@@ -34,6 +34,7 @@
     - gcc-4.9.1-multilib-no-red-zone.patch
     - gcc-4.9.1-crtstuff-add-kernel-variant.patch
     - gcc-4.9.1-crtstuff-disable-eh-tmc-and-java.patch
+    - gcc-4.9.1-incorrect-stack-red-zoning.patch
     :config_flags:
     - --enable-static
     - --enable-languages=c,c++

@@ -1,0 +1,29 @@
+Fix for:
+* https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61904  as well as
+* https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61801
+The later one causing Linus to deem GCC 4.9 "To be Terminally Broken"
+4.9 upstream already has these so it's a good idea to backport them to 4.9.1
+Index: gcc-4.9.1/gcc/sched-deps.c
+===================================================================
+--- gcc-4.9.1.orig/gcc/sched-deps.c    (revision 212580)
++++ gcc-4.9.1/gcc/sched-deps.c    (working copy)
+@@ -2713,7 +2713,8 @@
+       break;
+ 
+     case PREFETCH:
+-      if (PREFETCH_SCHEDULE_BARRIER_P (x))
++      if (PREFETCH_SCHEDULE_BARRIER_P (x)
++         && !DEBUG_INSN_P (insn))
+ 	reg_pending_barrier = TRUE_BARRIER;
+       /* Prefetch insn contains addresses only.  So if the prefetch
+ 	 address has no registers, there will be no dependencies on
+@@ -2750,7 +2751,8 @@
+ 	   Consider for instance a volatile asm that changes the fpu rounding
+ 	   mode.  An insn should not be moved across this even if it only uses
+ 	   pseudo-regs because it might give an incorrectly rounded result.  */
+-	if (code != ASM_OPERANDS || MEM_VOLATILE_P (x))
++	if ((code != ASM_OPERANDS || MEM_VOLATILE_P (x))
++	    && !DEBUG_INSN_P (insn))
+ 	  reg_pending_barrier = TRUE_BARRIER;
+ 
+ 	/* For all ASM_OPERANDS, we must traverse the vector of input operands.
