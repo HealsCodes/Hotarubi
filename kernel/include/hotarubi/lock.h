@@ -31,36 +31,59 @@
 class spin_lock
 {
 public:
+	spin_lock() : _lock{0} {};
+
+	bool check( void ){ return _lock == 0; }
+
 	void lock( void )
 	{
-#ifdef KERNEL
-		_isr_state = ( processor::core::read_flags() & ( 1 << 9 ) );
-		processor::core::disable_interrupts();
-#endif
-
-		do {} while( __sync_lock_test_and_set( &_lock, 1 ) );
+		do {} while( __atomic_test_and_set( &_lock, __ATOMIC_ACQUIRE ) );
 	}
 
 	void unlock( void )
 	{
-		__sync_lock_release( &_lock );
+		__atomic_clear( &_lock, __ATOMIC_RELEASE );
+	}
+
+private:
+	volatile uint8_t _lock = 0;
+};
+
+class spin_lock_irqsafe : public spin_lock
+{
+public:
+	spin_lock_irqsafe() : _isr_state{false} {};
+
+	void lock( void )
+	{
+		spin_lock::lock();
+#ifdef KERNEL
+		_isr_state = ( processor::core::read_flags() & ( 1 << 9 ) );
+		processor::core::disable_interrupts();
+#endif
+	}
+
+	void unlock( void )
+	{
 #ifdef KERNEL
 		if( _isr_state )
 		{
 			processor::core::enable_interrupts();
 		}
 #endif
+		spin_lock::unlock();
 	}
 
 private:
-	bool    _isr_state = 0;
-	uint8_t _lock = 0;
+	bool _isr_state = 0;
 };
 
+#ifdef KERNEL
+/* see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=50025 */
 class scoped_lock
 {
 public:
-	scoped_lock( spin_lock &lock ) : _lock{lock}
+	scoped_lock( spin_lock &l ) : _lock{l}
 	{
 		_lock.lock();
 	};
@@ -72,5 +95,6 @@ public:
 private:
 	spin_lock &_lock;
 };
+#endif
 
 #endif
