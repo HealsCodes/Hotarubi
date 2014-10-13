@@ -78,12 +78,15 @@ private:
 	bool _isr_state = 0;
 };
 
-#ifdef KERNEL
-/* see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=50025 */
 class scoped_lock
 {
 public:
-	scoped_lock( spin_lock &l ) : _lock{l}
+#if defined( __GNUC__ ) && __GNUC__ == 4 && __GNUC_MINOR__ < 9
+	/* see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=50025 */
+	scoped_lock( spin_lock &lock ) : _lock( lock )
+#else
+	scoped_lock( spin_lock &lock ) : _lock{lock}
+#endif
 	{
 		_lock.lock();
 	};
@@ -95,6 +98,5 @@ public:
 private:
 	spin_lock &_lock;
 };
-#endif
 
 #endif
