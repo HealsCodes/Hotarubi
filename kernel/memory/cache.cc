@@ -187,6 +187,9 @@ _slab_alloc( mem_cache *cache )
 			page_map->link.next = ( list_head* )cache;
 		}
 	}
+	/* never trust your uninitialized RAM.. */
+	memset( backing, 0, cache->alloc_size );
+
 	cache->stats.allocation += cache->alloc_size;
 
 	struct slab *slab;
