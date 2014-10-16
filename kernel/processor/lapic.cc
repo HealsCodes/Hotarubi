@@ -74,7 +74,7 @@ enum LAPICDelivery : uint16_t
 	kLAPICDeliverNMI    = 0x400,
 	kLAPICDeliverExtINT = 0x700,
 	kLAPICDeliverINIT   = 0x500,
-	kLAPICDeliverSIPI   = 0xc00,
+	kLAPICDeliverSIPI   = 0x600,
 };
 
 static volatile bool _calibrated = false;
@@ -123,9 +123,7 @@ lapic::init( void )
 				             _id, _init_id );
 			}
 
-			_write( kLAPICLogicalDestination,0xff000000 );
-			_write( kLAPICDestinationFormat, _read( kLAPICDestinationFormat ) & 0xf0000000 );
-
+			accept_broadcast( true );
 			{
 				LAPICInterrupt vectors[]{
 					kLAPICInterruptLINT0,
@@ -158,8 +156,8 @@ lapic::init( void )
 				set_nmi( _init_nmi, _init_nmi_trigger, _init_nmi_polarity );
 			}
 		}
+		eoi();
 	}
-	eoi();
 }
 
 void
@@ -169,9 +167,9 @@ lapic::calibrate( void )
 	_calibrated = false;
 	_ticks_per_msec = 1;
 	_write( kLAPICTimerDivider, ( _read( kLAPICTimerDivider ) & 0xfffffff0 ) | 0x0b );
+	_write( kLAPICTimerInitialCount, ( uint32_t )~0 );
 
 	core::timer()->one_shot( 1_ms, [](){ _calibrated = true; } );
-	set_timer( 0xffffffff, false );
 
 	/* poll until the PIT has fired */
 	while( _calibrated == false )
@@ -180,13 +178,13 @@ lapic::calibrate( void )
 	}
 
 	auto current = _read( kLAPICTimerCurrentCount );
-	set_mask( kLAPICInterruptTimer, true );
+	_write( kLAPICTimerInitialCount, 0 );
 
 	_ticks_per_msec = ( 0xffffffff - current + 1 );
 	_ticks_per_msec = ( _ticks_per_msec > 0 ) ? _ticks_per_msec : 1;
 
+	set_mask( kLAPICInterruptTimer, false );
 	log::printk( "LAPIC %d: %u ticks/ms\n", _id, _ticks_per_msec );
-	eoi();
 }
 
 void
@@ -228,11 +226,9 @@ lapic::set_route( LAPICInterrupt source, uint8_t target,
 void
 lapic::set_timer( unsigned msec, bool repeat )
 {
-	set_mask( kLAPICInterruptTimer, true );
-
-	uint32_t lvt = ( _read( kLAPICLvtTimer ) & ~( 1 << 16 ) ) | ( repeat << 17 );
+	uint32_t lvt = ( _read( kLAPICLvtTimer ) & ~( 1 << 16 | 1 << 17 ) ) | ( repeat << 17 );
+	_write( kLAPICTimerInitialCount, ( msec / 1_ms ) * _ticks_per_msec );
 	_write( kLAPICLvtTimer,  lvt );
-	_write( kLAPICTimerInitialCount, msec / 1_ms * _ticks_per_msec );
 }
 
 void
@@ -308,6 +304,13 @@ lapic::set_mask( LAPICInterrupt source, bool masked )
 	{
 		_write( reg, _read( reg ) & ~( 1 << 16 ) );
 	}
+}
+
+void
+lapic::accept_broadcast( bool accept )
+{
+	_write( kLAPICLogicalDestination, ( accept ) ? 0xff000000 : ( ( uint32_t )_id << 24 ) );
+	_write( kLAPICDestinationFormat, _read( kLAPICDestinationFormat ) & 0xf0000000 );
 }
 
 void
@@ -421,6 +424,7 @@ lapic::_send_ipi( uint8_t target, LAPICBroadcast mode, uint16_t delivery,
 		return;
 	}
 
+	ipi_lo |= ( 1 << 14 ); /* assert */
 	if( ipi_hi )
 	{
 		_write( kLAPICInterruptCmdHi, ipi_hi );
@@ -440,6 +444,7 @@ lapic::_write( uint16_t reg, uint32_t val )
 {
 	auto ioreg = ( volatile uint32_t* )( _io_base + reg );
 	*ioreg = val;
+	__asm__ __volatile__("": : :"memory");
 }
 
 };

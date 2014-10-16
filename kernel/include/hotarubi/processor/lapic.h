@@ -70,6 +70,8 @@ namespace processor
 		void set_nmi( unsigned lint_no, IRQTriggerMode trigger, IRQPolarity polarity );
 		void clr_nmi( unsigned lint_no );
 
+		void accept_broadcast( bool accept );
+
 		void send_ipi( uint8_t target, uint8_t vector );
 		void send_sipi( uint8_t target, uint8_t boot_vector );
 		void send_init( uint8_t target );
@@ -80,6 +82,7 @@ namespace processor
 		void eoi( void );
 
 		uint8_t id( void ) const { return _id; };
+		uint8_t init_id( void ) const { return _init_id; };
 		uint8_t version( void ) const { return _version; };
 
 	private:
