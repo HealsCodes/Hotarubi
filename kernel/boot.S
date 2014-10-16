@@ -81,45 +81,8 @@ L_flush_gdt_32:
 	mov gs, ax
 	mov ss, ax
 
-	cmp dword ptr[_BSP], 1
-	jne L_enable_paging
-
-L_setup_paging:
-	lea edi, BOOT_PML4
-	lea ecx, BOOT_PDPT_2
-	add ecx, 0x1000
-	sub ecx, edi
-	shr ecx, 2
-	xor eax, eax
-	rep stosd
-
-	lea ebx, BOOT_PML4
-	lea eax, BOOT_PDPT_1
-	or  eax, 0x01
-	mov dword ptr[ebx + 0]        , eax
-	lea eax, BOOT_PDPT_2
-	or  eax, 0x01
-	mov dword ptr[ebx + 0x1ff * 8], eax
-
-	lea ebx, BOOT_PDPT_1
-	lea edi, BOOT_PDPT_2
-	lea eax, BOOT_PDT
-	or  eax, 0x01
-	mov dword ptr[ebx + 0]        , eax
-	mov dword ptr[edi + 0x1fe * 8], eax
-
-	lea ebx, BOOT_PDT
-	mov ecx, 0
-	mov eax, 0x83
-L_map_boot_vm:
-	mov dword ptr[ebx + ecx * 8], eax
-	inc ecx
-	add eax, 0x00200000
-	cmp eax, BOOT_MAX_MAPPED
-	jna L_map_boot_vm
-
 L_enable_paging:
-	lea eax, BOOT_PML4
+	lea eax, _BOOT_PML4
 	mov cr3, eax
 
 	mov eax, cr4
@@ -132,7 +95,8 @@ L_enable_paging:
 	wrmsr
 
 	mov eax, cr0
-	or  eax, 1 << 31
+	or  eax, 1 << 31 /* enable PE */
+	or  eax, 1 << 16 /* enable WP and don't count on BIOS / EFI for that */
 	mov cr0, eax
 	jmp 0x08:L_paging_enabled
 	hlt
@@ -216,3 +180,34 @@ _GDT:
 _GDTR:
 	.word (_GDTR - _GDT) - 1
 	.quad _GDT
+
+.align 4096
+_BOOT_PDT:
+	addr = 0x00000000
+	.rept 512
+		.quad ( addr | 0x83 )      /* addr | read,write,2MB */
+		addr = ( addr + 0x200000 ) /* on to the next 2MB    */
+	.endr
+
+.align 4096
+_BOOT_PML4:
+	.quad (_BOOT_PDPT_1 + 3)       /* PDPT mapping 1GB 0...1GB */
+	.rept 510
+		.quad 0
+	.endr
+	.quad (_BOOT_PDPT_2 + 3)       /* PDPT mapping 1GB to KERNEL_VMA */
+
+.align 4096
+_BOOT_PDPT_1:
+	.quad (_BOOT_PDT + 3)
+	.rept 511
+		.quad 0
+	.endr
+
+.align 4096
+_BOOT_PDPT_2:
+	.rept 510
+		.quad 0
+	.endr
+	.quad (_BOOT_PDT + 3)
+	.quad 0
