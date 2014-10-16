@@ -50,11 +50,10 @@ ioapic::~ioapic()
 {
 	if( _io_mem != nullptr )
 	{
-		for( auto i = 0; i < _size; ++i )
+		for( auto i = _base; i < _size; ++i )
 		{
 			/* mask all */
-			_write( kIOAPICRedirectLo + i * 2,
-			        _read( kIOAPICRedirectLo + i * 2 ) & ( 1 << 16 ) );
+			set_mask( i, true );
 		}
 		memory::mmio::release_region( &_io_mem );
 	}
@@ -78,8 +77,11 @@ ioapic::init( uint64_t address, uint8_t irq_base )
 			for( auto i = 0; i < _size; ++i )
 			{
 				/* mask all */
-				_write( kIOAPICRedirectLo + i * 2,
-				        _read( kIOAPICRedirectLo + i * 2 ) | ( 1 << 16 ) );
+				uint32_t val_lo = _read( kIOAPICRedirectLo + i * 2 ) | ( 1 << 16 ),
+				         val_hi = _read( kIOAPICRedirectHi + i * 2 );
+
+				_write( kIOAPICRedirectLo + i * 2, val_lo );
+				_write( kIOAPICRedirectHi + i * 2, val_hi );
 			}
 		}
 	}
@@ -94,16 +96,23 @@ ioapic::set_route( uint8_t source, uint8_t target,
 		return;
 	}
 
-	uint32_t val_lo = _read( kIOAPICRedirectLo + source * 2 ) & ~0x0000c0ff,
-	         val_hi = _read( kIOAPICRedirectHi + source * 2 ) & ~0xff000000;
-
-	if( ( val_lo & kIOAPICDeliverNMI ) != kIOAPICDeliverNMI )
-	{
-		/* set trigger / polarity for non-NMI IRQs */
+	uint32_t val_lo = 0,
+	         val_hi = 0;
+//
+//	if( ( val_lo & kIOAPICDeliverNMI ) != kIOAPICDeliverNMI )
+//	{
+//		/* set trigger / polarity for non-NMI IRQs */
 		val_lo |= _irq_flags( trigger, polarity );
-	}
-	val_lo |= ( 1 << 11 ) | target; /* logical delivery mode, vector: target */
-	val_hi |= 0xff000000; /* broadcast to all LAPICs */
+//	}
+//	else
+//	{
+//		val_lo |= _irq_flags( kIRQTriggerEdge, kIRQPolarityLow );
+//	}
+
+	val_lo |= ( 1 << 11 );   /* logical delivery mode */
+	val_lo |= ( 1 << 16 );   /* masked by default */
+	val_lo |= target;        /* vector: target */
+	val_hi |= 0xff000000UL;  /* broadcast to all LAPICs */
 
 	_write( kIOAPICRedirectHi + source * 2, val_hi );
 	_write( kIOAPICRedirectLo + source * 2, val_lo );
@@ -117,14 +126,18 @@ ioapic::set_mask( uint8_t source, bool masked )
 		return;
 	}
 
-	uint32_t val = _read( kIOAPICRedirectLo + source * 2 ) & ~0x00010000;
-	if( ( val & kIOAPICDeliverNMI ) != kIOAPICDeliverNMI )
-	{
-		/* no reason in trying to mask an NMI.. */
-		val &= ~0x0000e700;
-		val |= _irq_flags( kIRQTriggerConform, kIRQPolarityConform ) | ( masked << 16 );
-		_write( kIOAPICRedirectLo + source * 2, val );
-	}
+	uint32_t val_lo = _read( kIOAPICRedirectLo + source * 2 ) & ~( 1 << 16 ),
+	         val_hi = _read( kIOAPICRedirectHi + source * 2 );
+
+//	if( ( val_lo & kIOAPICDeliverNMI ) != kIOAPICDeliverNMI )
+//	{
+//		/* no reason in trying to mask an NMI.. */
+//		val_lo &= ~0x0000e700;
+//		val_lo |= _irq_flags( kIRQTriggerConform, kIRQPolarityConform ) | ( masked << 16 );
+//	}
+	val_lo |= ( masked << 16 );
+	_write( kIOAPICRedirectLo + source * 2, val_lo );
+	_write( kIOAPICRedirectHi + source * 2, val_hi );
 }
 
 void
@@ -135,9 +148,12 @@ ioapic::set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity )
 		return;
 	}
 
-	uint32_t val = _read( kIOAPICRedirectLo + source * 2 ) & ~0x0000e700;
-	val |= _irq_flags( trigger, polarity ) | kIOAPICDeliverNMI;
-	_write( kIOAPICRedirectLo + source * 2, val );
+	uint32_t val_lo = _read( kIOAPICRedirectLo + source * 2 ) & ~0x0000e700,
+	         val_hi = _read( kIOAPICRedirectHi + source * 2 );
+
+	val_lo |= _irq_flags( trigger, polarity ) | kIOAPICDeliverNMI;
+	_write( kIOAPICRedirectLo + source * 2, val_lo );
+	_write( kIOAPICRedirectHi + source * 2, val_hi );
 }
 
 void
@@ -147,8 +163,11 @@ ioapic::clr_nmi( uint8_t source )
 	{
 		return;
 	}
-	_write( kIOAPICRedirectLo + source * 2,
-	        _read( kIOAPICRedirectLo + source * 2 ) & ~kIOAPICDeliverNMI );
+	uint32_t val_lo = _read( kIOAPICRedirectLo + source * 2 ) & ~kIOAPICDeliverNMI,
+	         val_hi = _read( kIOAPICRedirectHi + source * 2 );
+
+	_write( kIOAPICRedirectLo + source * 2, val_lo );
+	_write( kIOAPICRedirectHi + source * 2, val_hi );
 }
 
 uint32_t
@@ -192,7 +211,7 @@ uint32_t
 ioapic::_read( uint8_t reg )
 {
 	auto iosel = ( volatile uint32_t* )_io_base;
-	auto iowin = ( volatile uint32_t* )(_io_base + 0x10);
+	auto iowin = ( volatile uint32_t* )( _io_base + 0x10 );
 
 	*iosel = reg;
 	return *iowin;
@@ -202,10 +221,12 @@ void
 ioapic::_write( uint8_t reg, uint32_t value )
 {
 	auto iosel = ( volatile uint32_t* )_io_base;
-	auto iowin = ( volatile uint32_t* )(_io_base + 0x10);
+	auto iowin = ( volatile uint32_t* )( _io_base + 0x10 );
 
 	*iosel = reg;
+	__asm__ __volatile__("": : :"memory");
 	*iowin = value;
+	__asm__ __volatile__("": : :"memory");
 }
 
 };
