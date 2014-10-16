@@ -89,7 +89,7 @@ _lookup_cache_for_size( size_t n )
 {
 	for( size_t i = 0; _kmalloc_cache_table[i].size; ++i )
 	{
-		if( n + sizeof( uintptr_t ) <= _kmalloc_cache_table[i].size )
+		if( n <= _kmalloc_cache_table[i].size )
 		{
 			return &_kmalloc_cache_table[i];
 		}
@@ -103,7 +103,11 @@ kmalloc( size_t n )
 	auto cache = _lookup_cache_for_size( n );
 	if( cache != nullptr )
 	{
-		return ( void* )memory::cache::get_object( cache->cache );
+		auto res = memory::cache::get_object( cache->cache );
+		if( res != nullptr )
+		{
+			return ( void* )res;
+		}
 	}
 	log::printk( "kmalloc: can't serve request for %zd bytes!\n", n );
 	return nullptr;
@@ -165,7 +169,7 @@ init( void )
 		bool overflow_check = ( _kmalloc_cache_table[i].size < 1024 );
 
 		auto cache = memory::cache::create( _kmalloc_cache_names[i],
-		                                    _kmalloc_cache_table[i].size + sizeof( uintptr_t ),
+		                                    _kmalloc_cache_table[i].size,
 		                                    16, overflow_check );
 		if( cache != nullptr )
 		{
