@@ -49,12 +49,10 @@ pit::init( void )
 		if( idt::register_irq_handler( _vector, _irq_handler, ( uint64_t )this ) )
 		{
 			core::route_isa_irq( 0, _vector );
-			one_shot( 200_us, nullptr );
-
 			core::enable_interrupts();
+			one_shot( 100_ms, nullptr );
 			__asm__ __volatile__( "hlt" );
 			core::disable_interrupts();
-			core::current()->lapic->eoi();
 
 			log::printk( "PIC initialized\n" );
 		}
@@ -105,6 +103,7 @@ pit::_trigger( void )
 	{
 		_periodic_handler();
 	}
+	core::current()->lapic->eoi();
 }
 
 void
