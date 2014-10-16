@@ -149,20 +149,6 @@ interrupt_stub 19, 0, 0 /* #XM  - SIMD floating point error */
 
 interrupt_stub 32, 0, 0 /* syscall */
 
-/* freely allocatable, dynamically patched stubs */
-
-.globl _interrupt_stub_base
-.type  _interrupt_stub_base, @function
-.globl _interrupt_stub_size
-.type  _interrupt_stub_size, @object
-
-_interrupt_stub_base:
-.rep 223
-	interrupt_stub_base
-.endr
-_interrupt_stub_size:
-	.quad ( _interrupt_stub_size - _interrupt_stub_base )
-
 /* common handler code */
 
 .globl L_interrupt_swapgs_fast
@@ -208,6 +194,23 @@ L_interrupt_swapgs_slow:
 1:
 	interrupt_call_up
 	iretq
+
+/******************************************************************************/
+.section .irqstub, "wx"
+/******************************************************************************/
+/* freely allocatable, dynamically patched stubs */
+
+.globl _interrupt_stub_base
+.type  _interrupt_stub_base, @function
+.globl _interrupt_stub_size
+.type  _interrupt_stub_size, @object
+
+_interrupt_stub_base:
+.rep 223
+	interrupt_stub_base
+.endr
+_interrupt_stub_size:
+	.quad ( _interrupt_stub_size - _interrupt_stub_base )
 
 /******************************************************************************/
 .section .bss

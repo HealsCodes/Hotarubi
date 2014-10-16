@@ -50,7 +50,7 @@ extern "C"
 {
 	/* constants from link.ld */
 	extern unsigned char __bootstrap[], __ebootstrap[];
-	extern unsigned char __text[], __data[], __bss[], __end[];
+	extern unsigned char __text[], __irqstub[], __data[], __bss[], __end[];
 }
 #endif
 
@@ -96,7 +96,7 @@ _map_region( uint64_t *pml4, virt_addr_t vaddr, phys_addr_t paddr, size_t len,
 				return false;
 			}
 			memset( pdpt, 0, PAGE_SIZE );
-			pml4[MMU_PML4_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdpt ) | kVPFlagPresent;
+			pml4[MMU_PML4_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdpt ) | kVPFlagPresent | kVPFlagWritable;
 		}
 
 		pdt = ( uint64_t* )VIRT_ADDR( MMU_PDT_ADDR( pdpt, vaddr ) );
@@ -107,7 +107,7 @@ _map_region( uint64_t *pml4, virt_addr_t vaddr, phys_addr_t paddr, size_t len,
 				return false;
 			}
 			memset( pdt, 0, PAGE_SIZE );
-			pdpt[MMU_PDPT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdt ) | kVPFlagPresent;
+			pdpt[MMU_PDPT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdt ) | kVPFlagPresent | kVPFlagWritable;
 		}
 
 		pt = ( uint64_t* )VIRT_ADDR( MMU_PT_ADDR( pdt, vaddr ) );
@@ -118,7 +118,7 @@ _map_region( uint64_t *pml4, virt_addr_t vaddr, phys_addr_t paddr, size_t len,
 				return false;
 			}
 			memset( pt, 0, PAGE_SIZE );
-			pdt[MMU_PDT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pt ) | kVPFlagPresent;
+			pdt[MMU_PDT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pt ) | kVPFlagPresent | kVPFlagWritable;
 		}
 
 		pt[MMU_PT_INDEX( vaddr )] = paddr | kVPFlagPresent | flags;
@@ -199,11 +199,11 @@ void _create_system_vm( void )
 	memset( _system_pml4, 0, PAGE_SIZE );
 
 	/* map the video ram (bootstrap needs it) */
-	if( !_map_region( _system_pml4, 0xa0000, 0xa0000, 80 * 25 * 2, kVPFlagWritable ) )
+	if( !_map_region( _system_pml4, 0xa0000, 0xa0000, 80 * 26 * 2, kVPFlagWritable ) )
 	{
 		goto error_out;
 	}
-	if( !_map_region( _system_pml4, 0xb8000, 0xb8000, 80 * 25 * 2, kVPFlagWritable ) )
+	if( !_map_region( _system_pml4, 0xb8000, 0xb8000, 80 * 26 * 2, kVPFlagWritable ) )
 	{
 		goto error_out;
 	}
@@ -211,7 +211,16 @@ void _create_system_vm( void )
 	/* map kernel .text (ro) */
 	if( !_map_region( _system_pml4, 
 	                  ( uintptr_t )__text, ( uintptr_t )__text - kVMRangeKernelBase,
-	                  ( uintptr_t )__data - ( uintptr_t )__text ) )
+	                  ( uintptr_t )__irqstub - ( uintptr_t )__text ) )
+	{
+		goto error_out;
+	}
+
+	/* map kernel .irqstub (rw) */
+	if( !_map_region( _system_pml4,
+	                  ( uintptr_t )__irqstub, ( uintptr_t )__irqstub - kVMRangeKernelBase,
+	                  ( uintptr_t )__data - ( uintptr_t )__irqstub,
+	                  kVPFlagWritable ) )
 	{
 		goto error_out;
 	}

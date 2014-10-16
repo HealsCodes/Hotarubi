@@ -44,6 +44,10 @@ SECTIONS {
 		*(.rodata*)
 		*(.gnu.linkonce.r*)
 
+		. = ALIGN(4096);
+		__irqstub = .;
+		*(.irqstub*)
+
 		__etext = .;
 	}
 	.data ALIGN(4096) : AT(ADDR(.data) - KERNEL_VMA) {
@@ -71,19 +75,6 @@ SECTIONS {
 		. = ALIGN(16);
 
 		__ebss = .;
-		__bootpages = .;
-		
-		. = ALIGN(4096);
-		__BOOT_PML4 = .;
-		. = . + 4096;
-		__BOOT_PDPT_1 = .;
-		. = . + 4096;
-		__BOOT_PDPT_2 = .;
-		. = . + 4096;
-		__BOOT_PDT = .;
-		. = . + 4096;
-
-		__ebootpages = .;
 	}
 	__end = .;
 
@@ -99,10 +90,4 @@ SECTIONS {
 		*(.igot*)
 		*(.iplt*)
 	}
-
-	/* provide relocated symbols to kernel / bootstrap */
-	BOOT_PML4   = __BOOT_PML4   - KERNEL_VMA;
-	BOOT_PDPT_1 = __BOOT_PDPT_1 - KERNEL_VMA;
-	BOOT_PDPT_2 = __BOOT_PDPT_2 - KERNEL_VMA;
-	BOOT_PDT    = __BOOT_PDT    - KERNEL_VMA;
 }
