@@ -75,10 +75,6 @@ namespace processor
 		{
 			io::outb( 0xff, 0x21 );
 			io::outb( 0xff, 0xa1 );
-			io::wait();
-			io::outb( 0x20, 0x20 );
-			io::wait();
-			io::outb( 0xa0, 0x20 );
 		};
 	};
 };
