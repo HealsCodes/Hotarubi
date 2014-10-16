@@ -58,6 +58,10 @@ _get_table( const char *signature )
 			{
 				break;
 			}
+			else
+			{
+				res = nullptr;
+			}
 		} 
 	}
 	else if( xsdt != nullptr )
@@ -72,6 +76,10 @@ _get_table( const char *signature )
 			{
 				break;
 			}
+			else
+			{
+				res = nullptr;
+			}
 		} 
 	}
 	return res;
@@ -85,14 +93,21 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 	if( madt == nullptr )
 	{
 		log::printk( "acpi: No MADT table available!\n" );
-		do {} while( 0 );
+		do { __asm__ __volatile__( "hlt" ); } while( 1 );
 	}
 
+	if( madt->flags & 1 )
+	{
+		log::printk( "acpi: disabling 8259 PICs\n" );
+		processor::pic::initialize();
+		processor::pic::disable();
+	}
 
 	core_count = 0;
 	ioapic_count = 0;
 
 	uint32_t lapic_base = 0;
+	uint32_t core_base = 255;
 	auto entry = &madt->entries[0];
 	/* first run: count the system resources */
 	while( ( uintptr_t )entry - ( uintptr_t )madt < madt->length )
@@ -100,8 +115,13 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 		switch( entry->type )
 		{
 			case kMADTEntryLAPIC:
+			{
 				++core_count;
+			
+				auto desc = ( madt_lapic_entry* )entry;
+				core_base = ( desc->processor_id < core_base ) ? desc->processor_id : core_base;
 				break;
+			}
 
 			case kMADTEntryIOAPIC:
 				++ioapic_count;
@@ -113,7 +133,6 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 				auto trigger  = processor::IRQTriggerMode( desc->flags.trigger );
 				auto polarity = processor::IRQPolarity( desc->flags.polarity );
 				auto irq      = processor::core::irqs( desc->source_irq );
-
 				if( irq != nullptr )
 				{
 					irq->setup( desc->source_irq, desc->global_irq,
@@ -140,11 +159,20 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 		log::printk( "acpi: detected %i processors\n", core_count );
 		aps = new processor::core[core_count - 1];
 	}
-
+	else
+	{
+		log::printk( "acpi: no processor detected - wait WHAT!?\n" );
+		do{ __asm__ __volatile__( "hlt" ); }while( 1 );
+	}
 	if( ioapic_count > 0 )
 	{
 		log::printk( "acpi: detected %i IOAPICs\n", ioapic_count );
 		ioapics = new processor::ioapic[ioapic_count];
+	}
+	else
+	{
+		log::printk( "acpi: no IOAPICs - wait WHAT!?\n" );
+		do{ __asm__ __volatile__( "hlt" ); }while( 1 );
 	}
 
 	/* second run: configure them */
@@ -159,9 +187,9 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 				auto desc   = ( madt_lapic_entry* )entry;
 				auto lapic  = new processor::lapic( desc->apic_id, lapic_base );
 				
-				processor::core::instance( desc->processor_id )->lapic = lapic;
+				processor::core::instance( desc->processor_id - core_base )->lapic = lapic;
 				log::printk( "acpi: detected LAPIC %d for processor %d\n",
-				             desc->apic_id, desc->processor_id );
+			                 desc->apic_id, desc->processor_id );
 				break;
 			}
 
@@ -237,14 +265,14 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 				}
 				else
 				{
-					if( desc->processor_id > core_count )
+					if( desc->processor_id - core_base > core_count )
 					{
 						log::printk( " -- with unknown procossor %d\n",
 						             desc->processor_id );
 						break;
 					}
 
-					auto lapic = processor::core::instance( desc->processor_id )->lapic;
+					auto lapic = processor::core::instance( desc->processor_id - core_base )->lapic;
 					if( lapic != nullptr )
 					{
 						log::printk( " on processor %d\n", desc->processor_id );
@@ -258,13 +286,6 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 				break;
 		}
 		entry = ( madt_entry* )( ( uintptr_t )entry + entry->length );
-	}
-
-	if( madt->flags & 1 )
-	{
-		log::printk( "acpi: disabling 8259 PICs\n" );
-		processor::pic::initialize();
-		processor::pic::disable();
 	}
 }
 
@@ -292,6 +313,7 @@ init_tables( void )
 				}
 				log::printk( "acpi: RSDT version %d (%6.6s)\n",
 				             rsdt->revision, rsdt->oem_id );
+				break;
 			}
 			else
 			{
@@ -304,6 +326,7 @@ init_tables( void )
 				}
 				log::printk( "acpi: XSDT version %d (%6.6s)\n",
 				             xsdt->revision, xsdt->oem_id );
+				break;
 			}
 		}
 		rsd_ptr = nullptr;
