@@ -38,7 +38,7 @@ namespace :test do
     task test_id => binary do |t|
       binary = t.prerequisites.first
       puts "DO-TEST  #{File.basename( binary )}"
-      sh %{#{binary} --gtest_color=yes --gtest_print_time=0}, :verbose => false
+      sh %{#{binary} --gtest_color=auto --gtest_print_time=0}, :verbose => false
     end
 
     task :offline => test_id

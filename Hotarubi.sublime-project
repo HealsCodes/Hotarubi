@@ -1,0 +1,114 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+			"folder_exclude_patterns": ["toolchain"],
+			"file_exclude_patterns": [
+				".depends.mf",
+				"*.d",
+				"*.o",
+				"*.o32",
+				"*.o64",
+				"*.bin",
+				"*.elf",
+				"*.elf32",
+				"*.elf64"
+			],
+			"follow_symlinks": true
+		}
+	],
+	"settings":
+	{
+		"tab_size": 4,
+		"translate_tabs_to_spaces": false,
+		"use_tab_stops": true,
+		"detect_indentation": false,
+	},
+	"build_systems":
+	[
+		{
+			"name": "hotaruby - rake",
+
+			"cmd": ["rake"],
+			"file_regex": "^([^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
+			"working_dir": "${project_path}",
+			"syntax": "Packages/User/Hotaruby.build-language",
+			/*"line_regex", "syntax"*/
+
+			"variants": [
+				{
+					"name": "Run",
+					"file_regex": "^([^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
+
+					"linux": {
+						"cmd": [
+						    "xterm", "-e", "rake run:qemu:iso; read"
+						]
+					},
+
+					"osx": {
+						"cmd": [
+						        "osascript", "-e",
+						        "tell app \"Terminal\" to do script \"rake run:qemu:iso\""
+						]
+					}
+				},
+				{
+					"name": "Clean",
+					"cmd": ["rake", "clean"],
+					"file_regex": "^([^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
+				},
+				{
+					"name": "Clobber",
+					"cmd": ["rake", "clobber"],
+					"file_regex": "^([^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
+				},
+				{
+					"name": "Test",
+					"cmd": ["rake", "test:offline"],
+					"file_regex": "^([^:]*):([0-9]+):?([0-9]+)?:? (.*)$"
+				},
+				{
+					"name": "ISO",
+					"cmd": ["rake", "package:iso"],
+					"file_regex": "^([^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
+				},
+				{
+					"name": "Run - BIOS",
+					"file_regex": "^([^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
+
+					"linux": {
+						"cmd": [
+						    "xterm", "-e", "cd $project_path; rake 'run:qemu:iso[bios]'; read"
+						]
+					},
+
+					"osx": {
+						"cmd": [
+						        "osascript", "-e",
+						        "tell app \"Terminal\" to do script \"cd $project_path; rake 'run:qemu:iso[bios]'\""
+						]
+					}
+				},
+				{
+					"name": "Run - UEFI",
+					"file_regex": "^([^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
+
+					"linux": {
+						"cmd": [
+						    "xterm", "-e", "cd $project_path; rake 'run:qemu:iso[efi]'; read"
+						]
+					},
+
+					"osx": {
+						"cmd": [
+						        "osascript", "-e",
+						        "tell app \"Terminal\" to do script \"cd $project_path; rake 'run:qemu:iso[efi]'\""
+						]
+					}
+				},
+			],
+		}
+	]
+}
