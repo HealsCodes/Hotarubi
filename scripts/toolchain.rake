@@ -12,6 +12,7 @@ ENV['DYLD_LIBRARY_PATH'] = "#{Dir.pwd}/toolchain/lib:#{ENV['DYLD_LIBRARY_PATH']}
 
 TC_META  = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-meta.yml" )
 TC_FLAGS = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-flags.yml" )
+TC_LANG  = "#{File.dirname( __FILE__ )}/toolchain.build-language"
 TC_RELEASE =`git log -1 --pretty=format:%h scripts/toolchain-meta.yml scripts/patches`
 
 TC = {
@@ -71,6 +72,23 @@ namespace :toolchain do
     Dir.chdir( 'toolchain' ) do
       sh "tar -cjf ../toolchain-#{RUBY_PLATFORM}-#{TC_RELEASE}#{ENV['TRAVIS'] ? '_travis' : ''}.tar.bz2 ."
     end
+  end
+
+  desc "Install Sublime Text support / build language"
+  task :sublime do
+    sublime_dir = nil
+    case RUBY_PLATFORM
+      when /darwin/
+        sublime_dir = 'Library/Application Support/Sublime Text 3'
+      when /linux/
+        sublime_dir = '.config/sublime-text-3'
+      else
+        fail "Unsupported host platform '#{RUBY_PLATFORM}'!"
+    end
+
+    makedirs "#{ENV['HOME']}/#{sublime_dir}/Packages/User/"
+    rm_f "#{ENV['HOME']}/#{sublime_dir}/Packages/User/Hotarubi.build-language"
+    ln_s TC_LANG, "#{ENV['HOME']}/#{sublime_dir}/Packages/User/Hotarubi.build-language"
   end
 
   case RUBY_PLATFORM
