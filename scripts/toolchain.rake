@@ -109,6 +109,7 @@ namespace :toolchain do
     source_arch ||= "toolchain/arc/#{File.basename( meta[ :uri ] )}"
     source_path   = "toolchain/src/#{File.basename( source_arch, source_arch.gsub( /^.*(\.tar.\.*)/, '\1' ))}"
     build_path    = "toolchain/bld/#{File.basename( source_path )}"
+    prefix_path   = "#{Dir.pwd}/toolchain/"
 
     file source_arch do
       makedirs "toolchain/arc"
@@ -194,6 +195,10 @@ namespace :toolchain do
         end
 
         prepare.each do |cmd|
+          cmd = cmd.gsub( /@PREFIX@/, prefix_path )\
+                   .gsub( /@PWD@/, Dir.pwd )\
+                   .gsub( /@TOP@/, File.dirname( prefix_path ) )
+
           sh "#{cmd} #{$silent}"
         end
 
@@ -218,7 +223,9 @@ namespace :toolchain do
 
       unless File.exists? "toolchain/.build-#{target}"
         ( conf_flags = [ "--prefix=@PREFIX@" ] + ( meta[ :config_flags ] ||= [] ) ).map! do |flag|
-          flag.gsub( /@PREFIX@/, "#{Dir.pwd}/toolchain/" )
+          flag.gsub( /@PREFIX@/, prefix_path)\
+              .gsub( /@PWD@/, Dir.pwd )\
+              .gsub( /@TOP@/, File.dirname( prefix_path ) )
         end
 
         makedirs build_path
