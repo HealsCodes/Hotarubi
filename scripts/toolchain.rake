@@ -284,7 +284,7 @@ end
     include_path = "-I #{File.dirname( t.source )} #{TC_FLAGS[ :INCLUDE ].flatten.join( ' ' )}"
 
     File.open( t.name, 'w') do |depfile|
-      depfile.write( `#{TC[ :cxx ]} #{include_path} -MM #{t.source}`.gsub( /^(.*\.o:)/, t.source.ext( '.o:' ) ) )
+      depfile.write( `#{TC[ :cxx ]} #{include_path} -std=gnu++11 -MM #{t.source}`.gsub( /^(.*\.o:)/, t.source.ext( '.o:' ) ) )
     end
   end
 end
