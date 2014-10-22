@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 # extract and istall the C++ freestanding header set
 
-require 'FileUtils'
+require 'fileutils'
 include FileUtils
 
 # headers defined in the C++ freestading environment
