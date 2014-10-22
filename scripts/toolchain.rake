@@ -215,6 +215,8 @@ namespace :toolchain do
                 puts io.read
               end
             end
+
+            raise
           end
         end
 
