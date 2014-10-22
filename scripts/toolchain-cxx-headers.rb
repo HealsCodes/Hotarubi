@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/usr/bin/ruby
 # extract and istall the C++ freestanding header set
 
 require 'FileUtils'
