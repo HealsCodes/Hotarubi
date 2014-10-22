@@ -128,6 +128,7 @@
 				 * and the GCC headers rely on them.. */
 				"extra_flags": "-Wall -Wextra -Wpointer-arith -Wcast-align -Wwrite-strings -Wno-long-long -Wno-variadic-macros -ffreestanding -std=c++11 -DKERNEL -D__UINT8_TYPE__=unsigned\\ __INT8_TYPE__ -D__UINT16_TYPE__=unsigned\\ __INT16_TYPE__ -D__UINT32_TYPE__=unsigned\\ __INT32_TYPE__ -D__UINT64_TYPE__=unsigned\\ __INT64_TYPE__ -D__INT_LEAST8_TYPE__=__INT8_TYPE__ -D__INT_LEAST16_TYPE__=__INT16_TYPE__ -D__INT_LEAST32_TYPE__=__INT32_TYPE__ -D__INT_LEAST64_TYPE__=__INT64_TYPE__ -D__INT_FAST8_TYPE__=__INT8_TYPE__ -D__INT_FAST16_TYPE__=__INT16_TYPE__ -D__INT_FAST32_TYPE__=__INT32_TYPE__ -D__INT_FAST64_TYPE__=__INT64_TYPE__ -D__UINT_LEAST8_TYPE__=__UINT8_TYPE__ -D__UINT_LEAST16_TYPE__=__UINT16_TYPE__ -D__UINT_LEAST32_TYPE__=__UINT32_TYPE__ -D__UINT_LEAST64_TYPE__=__UINT64_TYPE__ -D__UINT_FAST8_TYPE__=__UINT8_TYPE__ -D__UINT_FAST16_TYPE__=__UINT16_TYPE__ -D__UINT_FAST32_TYPE__=__UINT32_TYPE__ -D__UINT_FAST64_TYPE__=__UINT64_TYPE__ -D__UINTPTR_TYPE__=unsigned\\ __INTPTR_TYPE__",
 				"include_dirs": [
+					"${project}/toolchain/include/c++",
 					"${project}/toolchain/lib/gcc/x86_64-elf/4.9.1/include",
 					"${project}/kernel/include",
 					"${directory}"
