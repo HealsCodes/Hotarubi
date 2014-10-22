@@ -31,7 +31,7 @@
     :size: 89854120
     :targets: [ all-gcc, install-strip-gcc, all-target-libgcc, install-target-libgcc ]
     :prepare:
-        - /@TOP@/scripts/toolchain-cxx-headers.rb @PREFIX@ @PWD@
+        - /@TOP@/scripts/toolchain/prep-cxx-headers.rb @PREFIX@ @PWD@
     :patches:
     - gcc-4.9.1-multilib-no-red-zone.patch
     - gcc-4.9.1-crtstuff-add-kernel-variant.patch

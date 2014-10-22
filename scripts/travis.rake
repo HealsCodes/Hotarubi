@@ -31,7 +31,7 @@ namespace :travis do
       :paranoid     => false
     }
 
-    release =`git log -1 --pretty=format:%h scripts/toolchain-meta.yml scripts/patches`
+    release =`git log -1 --pretty=format:%h scripts/toolchain/toolchain-meta.yml scripts/patches`
     toolchain_archive = "toolchain-#{RUBY_PLATFORM}-#{release}#{ENV['TRAVIS'] ? '_travis' : ''}.tar.bz2"
 
     task :fetch_toolchain do

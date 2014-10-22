@@ -13,7 +13,7 @@ ENV['DYLD_LIBRARY_PATH'] = "#{Dir.pwd}/toolchain/lib:#{ENV['DYLD_LIBRARY_PATH']}
 TC_META  = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-meta.yml" )
 TC_FLAGS = YAML::load_file( "#{File.dirname( __FILE__ )}/toolchain-flags.yml" )
 TC_LANG  = "#{File.dirname( __FILE__ )}/toolchain.build-language"
-TC_RELEASE =`git log -1 --pretty=format:%h scripts/toolchain-meta.yml scripts/patches`
+TC_RELEASE =`git log -1 --pretty=format:%h scripts/toolchain/toolchain-meta.yml scripts/patches`
 
 TC = {
   :cxx => 'toolchain/bin/x86_64-elf-g++',

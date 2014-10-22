@@ -3,7 +3,12 @@
 	[
 		{
 			"path": ".",
-			"folder_exclude_patterns": ["toolchain"],
+			"folder_include_patterns": [
+				"kernel",
+				"kernel/**",
+				"scripts",
+				"scripts/**"
+			],
 			"file_exclude_patterns": [
 				".depends.mf",
 				"*.d",
@@ -15,7 +20,10 @@
 				"*.elf32",
 				"*.elf64"
 			],
-			"follow_symlinks": true
+			/* Sublime has the tendency to mess up by mixing which of
+			 * include/hotarubi and test/hotarubi is the folder and 
+			 * which is the symlink */
+			"follow_symlinks": false
 		}
 	],
 	"settings":
