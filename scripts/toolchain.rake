@@ -191,15 +191,31 @@ namespace :toolchain do
 
       Dir.chdir( source_path ) do
         patches.each do |patch|
-          sh "patch -p1 < ../../../scripts/patches/#{patch} #{$silent}"
+          begin
+            sh "patch -p1 < ../../../scripts/patches/#{patch} #{$silent}"
+          rescue
+            puts "Failed to apply #{patch}!"
+            raise
+          end
         end
 
         prepare.each do |cmd|
-          cmd = cmd.gsub( /@PREFIX@/, prefix_path )\
-                   .gsub( /@PWD@/, Dir.pwd )\
-                   .gsub( /@TOP@/, File.dirname( prefix_path ) )
+          begin
+            cmd = cmd.gsub( /@PREFIX@/, prefix_path )\
+                     .gsub( /@PWD@/, Dir.pwd )\
+                     .gsub( /@TOP@/, File.dirname( prefix_path ) )
 
-          sh "#{cmd} #{$silent}"
+            sh "#{cmd} #{ '> prepare.log 2>&1' unless $silent.empty?}"
+            rm_f 'prepare.log'
+          rescue
+            puts "Failed to run preparation command: #{cmd}"
+            if File.exists? 'perpare.log'
+              puts "Command output:"
+              open( 'prepare.log', 'r' ) do |io|
+                puts io.read
+              end
+            end
+          end
         end
 
         File.chmod( 0755, 'configure' )
