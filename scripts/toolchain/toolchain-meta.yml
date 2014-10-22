@@ -37,6 +37,7 @@
     - gcc-4.9.1-crtstuff-add-kernel-variant.patch
     - gcc-4.9.1-crtstuff-disable-eh-tmc-and-java.patch
     - gcc-4.9.1-incorrect-stack-red-zoning.patch
+    - gcc-4.9.1-std-limits-kernel.patch
     :config_flags:
     - --enable-static
     - --enable-languages=c,c++
