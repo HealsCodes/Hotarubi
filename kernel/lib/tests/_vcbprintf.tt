@@ -21,6 +21,10 @@
 
 /* unit testing _vcbprintf */
 
+#include <stdint.h>
+#include <stddef.h>
+#include <stdarg.h>
+
 #include "gtest/gtest.h"
 #include "../_vcbprintf.cc"
 
