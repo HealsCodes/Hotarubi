@@ -32,6 +32,20 @@
 		"translate_tabs_to_spaces": false,
 		"use_tab_stops": true,
 		"detect_indentation": false,
+		"todoreview" :
+		{
+			"patterns": {
+				"TODO" : "TODO[\\s]*?:[\\s]*(?P<todo>.*?)(\\*/)?$",
+				"FIXME": "FIXME[\\s]*?:[\\s]*(?P<fixme>.*?)(\\*/)?$",
+				"NOTE" : "NOTE[\\s]*?:[\\s]*(?P<note>.*?)(\\*/)?$"
+			},
+			"exclude_folders": [
+				"*.git*",
+				"doc/*",
+				"toolchain/*",
+				"scripts/test/gtest/*",
+			],
+		},
 	},
 	"build_systems":
 	[
