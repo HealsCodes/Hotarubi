@@ -30,8 +30,6 @@
 
 namespace processor
 {
-	/* TODO: send an IPI [to another LAPIC|to shorthand addresses] */
-
 	class lapic
 	{
 	public:
