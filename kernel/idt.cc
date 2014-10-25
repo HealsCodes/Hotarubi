@@ -21,7 +21,7 @@
 
 /* Interrupt Descriptor Table manpulation */
 
-#include <stdint.h>
+#include <cstdint>
 #include <string.h>
 #include <bitmask.h>
 

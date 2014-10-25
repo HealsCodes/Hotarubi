@@ -24,8 +24,12 @@
 #ifndef __TYPES_H
 #define __TYPES_H 1
 
-#include <stdint.h>
-#include <stddef.h>
+#include <cstdint>
+#include <cstddef>
+
+#ifdef __need_offsetof
+#define offsetof( type, member ) __builtin_offsetof( type, member )
+#endif
 
 typedef uint64_t virt_addr_t;
 typedef uint64_t phys_addr_t;

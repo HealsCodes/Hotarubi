@@ -21,11 +21,11 @@
 
 /* _vcbprintf as specified by PDClib */
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdarg.h>
+#include <cstdint>
+#include <cstddef>
+#include <cstdarg>
 #include <string.h>
-#include <limits.h>
+#include <limits>
 
 #define MAX_NUMBER_LEN 130 /* 2^128 in binary notation */
 

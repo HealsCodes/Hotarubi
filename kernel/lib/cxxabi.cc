@@ -23,8 +23,8 @@
  * C++ runtime initialization and destruction and other helpers
  * ..mostly functions required by the `Itanium C++ Application Binary Interface'
  */
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 #define CXXRT_MAX_ATEXIT_FUNCS 256 /* who want's 256 global class instances? */
 

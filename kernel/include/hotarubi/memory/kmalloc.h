@@ -24,7 +24,7 @@
 #ifndef _MEMORY_KMALLOC_H
 #define _MEMORY_KMALLOC_H 1
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace memory
 {

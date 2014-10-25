@@ -22,7 +22,7 @@
 #ifndef STRING_H
 #define STRING_H 1
 
-#include <stddef.h>
+#include <cstddef>
 #include <hotarubi/macros.h>
 
 BEGIN_C_DECL

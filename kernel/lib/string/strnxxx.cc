@@ -21,8 +21,8 @@
 
 /* mostly POSIX compliant functions for string manipulation */
 
-#include <stdint.h>
-#include <stddef.h>
+#include <cstdint>
+#include <cstddef>
 
 #include <hotarubi/macros.h>
 

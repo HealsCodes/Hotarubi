@@ -24,7 +24,7 @@
 #ifndef _LIST_H
 #define _LIST_H 1
 
-#include <stdint.h>
+#include <cstdint>
 
 /* list_* and LIST_* -- doubly linked lists
  *

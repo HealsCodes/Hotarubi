@@ -28,7 +28,7 @@
 #ifndef _BITMASK_H
 #define _BITMASK_H 1
 
-#include <stdint.h>
+#include <cstdint>
 
 template <typename T>
 class BitOps

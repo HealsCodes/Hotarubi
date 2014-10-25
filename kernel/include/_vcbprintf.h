@@ -24,9 +24,9 @@
 #ifndef ___VCBPRINTF_H
 #define ___VCBPRINTF_H 1
 
-#include <stdint.h>
-#include <stdarg.h>
-#include <stddef.h>
+#include <cstdint>
+#include <cstdarg>
+#include <cstddef>
 
 #include <hotarubi/macros.h>
 

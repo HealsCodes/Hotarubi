@@ -21,8 +21,8 @@
 
 /* mostly POSIX compliant functions for memory manipulation */
 
-#include <stdint.h>
-#include <stddef.h>
+#include <cstdint>
+#include <cstddef>
 
 #include <hotarubi/macros.h>
 
