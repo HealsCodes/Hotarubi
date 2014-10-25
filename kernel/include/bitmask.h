@@ -20,55 +20,94 @@
 *******************************************************************************/
 
 /* Template based bitmask operators for enumerations.
- * This is based on http://en.wikipedia.org/wiki/Barton-Nackman and requires
- * the use of -ffriend-injection which I know is not that clean at all but
- * it produces much cleaner code than C++11 enum classes *sigh*
+ * Works on all enum class types marked with the 'is_bitmask' tag.
  */
 
 #ifndef _BITMASK_H
 #define _BITMASK_H 1
 
 #include <cstdint>
+#include <type_traits>
 
 template <typename T>
-class BitOps
+struct is_bitmask
 {
-	friend constexpr T operator &( T a, T b )
-	{ 
-		return ( T )( ( uintptr_t )a & ( uintptr_t ) b );
-	};
+private:
+	template<typename U> static std::true_type  eval( decltype( U::is_bitmask )* );
+	template<typename>   static std::false_type eval( ... );
 
-	friend constexpr T operator |( T a, T b ) 
-	{ 
-		return ( T )( ( uintptr_t )a | ( uintptr_t ) b );
-	};
+	typedef decltype( eval<T>( 0 ) ) bitmask;
 
-	friend constexpr T operator ^( T a, T b )
-	{ 
-		return ( T )( ( uintptr_t )a ^ ( uintptr_t ) b ); 
-	};
-
-	friend constexpr T operator ~( T a )
-	{ 
-		return ( T )( ~( uintptr_t )a ); 
-	};
-
-	friend T& operator &=( T &a, T b )
-	{ 
-		a = a & b; return a; 
-	};
-
-	friend T& operator |=( T &a, T b )
-	{ 
-		a = a | b; return a;
-	};
-
-	friend T& operator ^=( T &a, T b )
-	{ 
-		a = a ^ b; return a;
-	};
+public:
+	static const bool value = std::is_enum<T>::value && bitmask::value;
 };
 
-#define BITMASK( T ) namespace _detail { class BitOps##T : private BitOps<T>{}; }
+template <typename T>
+constexpr T operator &( T a, T b )
+{
+	static_assert( is_bitmask<T>::value, "enum class without 'is_bitmask' tag");
+	return ( T )( ( typename std::underlying_type<T>::type )a
+	              & ( typename std::underlying_type<T>::type )b );
+};
+
+template <typename T>
+constexpr T operator |( T a, T b ) 
+{
+	static_assert( is_bitmask<T>::value, "enum class without 'is_bitmask' tag");
+	return ( T )( ( typename std::underlying_type<T>::type )a
+	              | ( typename std::underlying_type<T>::type )b );
+};
+
+template <typename T>
+constexpr T operator ^( T a, T b )
+{
+	static_assert( is_bitmask<T>::value, "enum class without 'is_bitmask' tag");
+	return ( T )( ( typename std::underlying_type<T>::type )a
+	              ^ ( typename std::underlying_type<T>::type )b );
+};
+
+template <typename T>
+constexpr T operator ~( T a )
+{
+	static_assert( is_bitmask<T>::value, "enum class without 'is_bitmask' tag");
+	return ( T )( ~( typename std::underlying_type<T>::type )a ); 
+};
+
+template <typename T>
+inline T& operator &=( T &a, T b )
+{
+	static_assert( is_bitmask<T>::value, "enum class without 'is_bitmask' tag");
+	a = a & b; return a; 
+};
+
+template <typename T>
+inline T& operator |=( T &a, T b )
+{
+	static_assert( is_bitmask<T>::value, "enum class without 'is_bitmask' tag");
+	a = a | b; return a;
+};
+
+template <typename T>
+inline T& operator ^=( T &a, T b )
+{
+	static_assert( is_bitmask<T>::value, "enum class without 'is_bitmask' tag");
+	a = a ^ b; return a;
+};
+
+template <typename T>
+constexpr bool flag_set( T a, T b )
+{
+	static_assert( is_bitmask<T>::value, "enum class without 'is_bitmask' tag");
+	return ( ( typename std::underlying_type<T>::type )a
+	         & ( typename std::underlying_type<T>::type )b );
+};
+
+template <typename T>
+constexpr typename std::underlying_type<T>::type numeric( T a )
+{
+	/* not explicitly a bitmask feature so check only for is_enum */
+	static_assert( std::is_enum<T>::value, "enum class is required");
+	return ( typename std::underlying_type<T>::type )a;
+};
 
 #endif
