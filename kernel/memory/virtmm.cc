@@ -35,12 +35,12 @@
 #define MMU_PDT_INDEX( x )  ( ( ( x ) >> 21 ) & 0x1ff )
 #define MMU_PT_INDEX( x )   ( ( ( x ) >> 12 ) & 0x1ff )
 
-#define MMU_PDPT_ADDR( pml4, vaddr ) ( pml4[MMU_PML4_INDEX( vaddr )] & ~kVPFlagMask )
-#define MMU_PDT_ADDR( pdpt, vaddr )  ( pdpt[MMU_PDPT_INDEX( vaddr )] & ~kVPFlagMask )
-#define MMU_PT_ADDR( pdt , vaddr )   (  pdt[MMU_PDT_INDEX ( vaddr )] & ~kVPFlagMask )
+#define MMU_PDPT_ADDR( pml4, vaddr ) ( pml4[MMU_PML4_INDEX( vaddr )] & numeric( ~__VPF( Mask ) ) )
+#define MMU_PDT_ADDR( pdpt, vaddr )  ( pdpt[MMU_PDPT_INDEX( vaddr )] & numeric( ~__VPF( Mask ) ) )
+#define MMU_PT_ADDR( pdt , vaddr )   (  pdt[MMU_PDT_INDEX ( vaddr )] & numeric( ~__VPF( Mask ) ) )
 
-#define MMU_PHYS_ADDR_4K( pt  , vaddr ) (   pt[MMU_PT_INDEX ( vaddr )] & ~kVPFlagMask )
-#define MMU_PHYS_ADDR_2M( pdt , vaddr ) (  pdt[MMU_PDT_INDEX( vaddr )] & ~kVPFlagMask2M )
+#define MMU_PHYS_ADDR_4K( pt  , vaddr ) (   pt[MMU_PT_INDEX ( vaddr )] & numeric( ~__VPF( Mask ) ) )
+#define MMU_PHYS_ADDR_2M( pdt , vaddr ) (  pdt[MMU_PDT_INDEX( vaddr )] & numeric( ~__VPF( Mask2M ) ) )
 
 #define PHYS_ADDR( addr ) ( ( ( addr ) == 0 ) ? 0 : ( ( addr ) - physmm::physical_base_offset() ) )
 #define VIRT_ADDR( addr ) ( ( ( addr ) == 0 ) ? 0 : ( ( addr ) + physmm::physical_base_offset() ) )
@@ -68,7 +68,7 @@ static virt_addr_t *_system_pml4 = nullptr;
 
 static bool
 _map_region( uint64_t *pml4, virt_addr_t vaddr, phys_addr_t paddr, size_t len,
-             VirtPageFlagSet flags=kVPFlagNone )
+             Flags flags=__VPF( None ) )
 {
 	uint64_t *pdpt = nullptr,
 	         *pdt  = nullptr,
@@ -96,7 +96,8 @@ _map_region( uint64_t *pml4, virt_addr_t vaddr, phys_addr_t paddr, size_t len,
 				return false;
 			}
 			memset( pdpt, 0, PAGE_SIZE );
-			pml4[MMU_PML4_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdpt ) | kVPFlagPresent | kVPFlagWritable;
+			pml4[MMU_PML4_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdpt ) | 
+			                                numeric( __VPF( Present ) | __VPF( Writable ) );
 		}
 
 		pdt = ( uint64_t* )VIRT_ADDR( MMU_PDT_ADDR( pdpt, vaddr ) );
@@ -107,7 +108,8 @@ _map_region( uint64_t *pml4, virt_addr_t vaddr, phys_addr_t paddr, size_t len,
 				return false;
 			}
 			memset( pdt, 0, PAGE_SIZE );
-			pdpt[MMU_PDPT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdt ) | kVPFlagPresent | kVPFlagWritable;
+			pdpt[MMU_PDPT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pdt ) | 
+			                                numeric( __VPF( Present ) | __VPF( Writable ) );
 		}
 
 		pt = ( uint64_t* )VIRT_ADDR( MMU_PT_ADDR( pdt, vaddr ) );
@@ -118,10 +120,11 @@ _map_region( uint64_t *pml4, virt_addr_t vaddr, phys_addr_t paddr, size_t len,
 				return false;
 			}
 			memset( pt, 0, PAGE_SIZE );
-			pdt[MMU_PDT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pt ) | kVPFlagPresent | kVPFlagWritable;
+			pdt[MMU_PDT_INDEX( vaddr )] = PHYS_ADDR( ( uintptr_t )pt ) | 
+			                              numeric( __VPF( Present ) | __VPF( Writable ) );
 		}
 
-		pt[MMU_PT_INDEX( vaddr )] = paddr | kVPFlagPresent | flags;
+		pt[MMU_PT_INDEX( vaddr )] = paddr | numeric( __VPF( Present )  | flags );
 
 		vaddr += PAGE_SIZE;
 		paddr += PAGE_SIZE;
@@ -199,11 +202,11 @@ void _create_system_vm( void )
 	memset( _system_pml4, 0, PAGE_SIZE );
 
 	/* map the video ram (bootstrap needs it) */
-	if( !_map_region( _system_pml4, 0xa0000, 0xa0000, 80 * 26 * 2, kVPFlagWritable ) )
+	if( !_map_region( _system_pml4, 0xa0000, 0xa0000, 80 * 26 * 2, __VPF( Writable ) ) )
 	{
 		goto error_out;
 	}
-	if( !_map_region( _system_pml4, 0xb8000, 0xb8000, 80 * 26 * 2, kVPFlagWritable ) )
+	if( !_map_region( _system_pml4, 0xb8000, 0xb8000, 80 * 26 * 2, __VPF( Writable ) ) )
 	{
 		goto error_out;
 	}
@@ -220,7 +223,7 @@ void _create_system_vm( void )
 	if( !_map_region( _system_pml4,
 	                  ( uintptr_t )__irqstub, ( uintptr_t )__irqstub - kVMRangeKernelBase,
 	                  ( uintptr_t )__data - ( uintptr_t )__irqstub,
-	                  kVPFlagWritable ) )
+	                  __VPF( Writable ) ) )
 	{
 		goto error_out;
 	}
@@ -229,7 +232,7 @@ void _create_system_vm( void )
 	if( !_map_region( _system_pml4, 
 	                  ( uintptr_t )__data, ( uintptr_t )__data -  kVMRangeKernelBase,
 	                  ( uintptr_t )__end - ( uintptr_t )__data,
-	                  kVPFlagWritable ) )
+	                  __VPF( Writable ) ) )
 	{
 		goto error_out;
 	}
@@ -238,7 +241,7 @@ void _create_system_vm( void )
 	if( !_map_region( _system_pml4,
 	                  kVMRangePhysMemBase, 0,
 	                  physmm::memory_upper_bound,
-	                  kVPFlagWritable ) )
+	                  __VPF( Writable ) ) )
 	{
 		goto error_out;
 	}
@@ -250,7 +253,7 @@ error_out:
 }
 
 bool
-map_address( virt_addr_t vaddr, VirtPageFlagSet flags )
+map_address( virt_addr_t vaddr, Flags flags )
 {
 	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	phys_addr_t addr = ( phys_addr_t )physmm::alloc_page( __PPF( Active ) );
@@ -259,14 +262,14 @@ map_address( virt_addr_t vaddr, VirtPageFlagSet flags )
 }
 
 bool
-map_fixed( virt_addr_t vaddr, phys_addr_t paddr, VirtPageFlagSet flags )
+map_fixed( virt_addr_t vaddr, phys_addr_t paddr, Flags flags )
 {
 	uint64_t *pml4 = ( uint64_t* )VIRT_ADDR( processor::regs::read_cr3() );
 	return _map_region( pml4, vaddr, paddr, PAGE_SIZE, flags );
 }
 
 bool
-map_address_range( virt_addr_t vaddr, size_t npages, VirtPageFlagSet flags )
+map_address_range( virt_addr_t vaddr, size_t npages, Flags flags )
 {
 	for( size_t n = 0; n < npages; ++n )
 	{

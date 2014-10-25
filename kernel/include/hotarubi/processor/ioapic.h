@@ -37,11 +37,11 @@ namespace processor
 		void init( uint64_t address, uint8_t irq_base );
 		
 		void set_route( uint8_t source, uint8_t target,
-		                IRQTriggerMode trigger=kIRQTriggerConform,
-		                IRQPolarity polarity=kIRQPolarityConform );
+		                TriggerMode trigger=TriggerMode::kConform,
+		                Polarity polarity=Polarity::kConform );
 		void set_mask( uint8_t source, bool masked );
 
-		void set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity );
+		void set_nmi( uint8_t source, TriggerMode trigger, Polarity polarity );
 		void clr_nmi( uint8_t source );
 
 		uint8_t id( void ) const { return _id; };
@@ -51,7 +51,7 @@ namespace processor
 		uint8_t version( void ) const { return _version; };
 
 	private:
-		uint32_t _irq_flags( IRQTriggerMode trigger, IRQPolarity polarity );
+		uint32_t _irq_flags( TriggerMode trigger, Polarity polarity );
 
 		uint32_t _read( uint8_t reg );
 		void     _write( uint8_t reg, uint32_t value );

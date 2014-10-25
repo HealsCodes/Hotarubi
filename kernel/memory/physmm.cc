@@ -161,7 +161,7 @@ _search_first_free_range( unsigned num )
 }
 
 static void
-_flag_page_range( phys_addr_t addr, PhysPageFlagSet flags, size_t len )
+_flag_page_range( phys_addr_t addr, Flags flags, size_t len )
 {
 #ifdef KERNEL
 
@@ -184,7 +184,7 @@ _free_page_range( phys_addr_t addr, size_t len )
 	len /= PAGE_SIZE;
 	do {
 		memset( &memory_map_pages[__XPA( addr ) >> PAGE_SHIFT], 0, sizeof( page_map_t ) );
-		memory_map_pages[__XPA( addr ) >> PAGE_SHIFT].flags = kPPFlagUnused;
+		memory_map_pages[__XPA( addr ) >> PAGE_SHIFT].flags = __PPF( Unused );
 
 		addr += PAGE_SIZE;
 	} while( len-- );
@@ -318,7 +318,7 @@ init( const multiboot_info_t *boot_info )
 		}
 		else
 		{
-			_flag_page_range( mem_map->addr, kPPFlagReserved, mem_map->len );
+			_flag_page_range( mem_map->addr, __PPF( Reserved ), mem_map->len );
 		}
 
 		mem_map = ( multiboot_memory_map_t* )( ( uintptr_t )mem_map + mem_map->size + sizeof( mem_map->size ) );
@@ -363,7 +363,7 @@ free_page_count( void )
 }
 
 void*
-alloc_page( PhysPageFlagSet flags )
+alloc_page( Flags flags )
 {
 	phys_addr_t addr;
 	scoped_lock lock( _memory_map_lock );
@@ -385,7 +385,7 @@ alloc_page( PhysPageFlagSet flags )
 }
 
 void*
-alloc_page_range( unsigned count, PhysPageFlagSet flags )
+alloc_page_range( unsigned count, Flags flags )
 {
 	phys_addr_t addr;
 
@@ -485,7 +485,7 @@ page_map_t*
 get_page_map( phys_addr_t paddr )
 {
 	return ( ( paddr >> PAGE_SHIFT ) < _memory_map_size ) ? &memory_map_pages[ paddr >> 12 ]
-	                                                     : nullptr;
+	                                                      : nullptr;
 }
 
 };

@@ -67,14 +67,16 @@ enum LAPICRegs : uint16_t
 	kLAPICTimerDivider       = 0x3e0,
 };
 
-enum LAPICDelivery : uint16_t
+enum class LAPICDelivery : uint16_t
 {
-	kLAPICDeliverFixed  = 0x000,
-	kLAPICDeliverSMI    = 0x200,
-	kLAPICDeliverNMI    = 0x400,
-	kLAPICDeliverExtINT = 0x700,
-	kLAPICDeliverINIT   = 0x500,
-	kLAPICDeliverSIPI   = 0x600,
+	kFixed  = 0x000,
+	kSMI    = 0x200,
+	kNMI    = 0x400,
+	kExtINT = 0x700,
+	kINIT   = 0x500,
+	kSIPI   = 0x600,
+
+	is_bitmask = 0 // to avoid "not handled in case.."
 };
 
 static volatile bool _calibrated = false;
@@ -88,12 +90,12 @@ lapic::~lapic()
 {
 	if( _io_mem != nullptr )
 	{
-		set_mask( kLAPICInterruptLINT0  , true );
-		set_mask( kLAPICInterruptLINT1  , true );
-		set_mask( kLAPICInterruptTimer  , true );
-		set_mask( kLAPICInterruptPerfMon, true );
-		set_mask( kLAPICInterruptThermal, true );
-		set_mask( kLAPICInterruptError  , true );
+		set_mask( LAPICInterrupt::kLINT0  , true );
+		set_mask( LAPICInterrupt::kLINT1  , true );
+		set_mask( LAPICInterrupt::kTimer  , true );
+		set_mask( LAPICInterrupt::kPerfMon, true );
+		set_mask( LAPICInterrupt::kThermal, true );
+		set_mask( LAPICInterrupt::kError  , true );
 
 		memory::mmio::release_region( &_io_mem );
 	}
@@ -126,17 +128,17 @@ lapic::init( void )
 			accept_broadcast( true );
 			{
 				LAPICInterrupt vectors[]{
-					kLAPICInterruptLINT0,
-					kLAPICInterruptLINT1,
-					kLAPICInterruptTimer,
-					kLAPICInterruptThermal,
-					kLAPICInterruptPerfMon,
-					kLAPICInterruptError,
+					LAPICInterrupt::kLINT0,
+					LAPICInterrupt::kLINT1,
+					LAPICInterrupt::kTimer,
+					LAPICInterrupt::kThermal,
+					LAPICInterrupt::kPerfMon,
+					LAPICInterrupt::kError,
 					LAPICInterrupt( 0 )
 				};
 
 				/* map LAPIC IRQs to 50+ */
-				for( auto v = 0; vectors[v] != 0; ++v )
+				for( auto v = 0; vectors[v] != LAPICInterrupt( 0 ); ++v )
 				{
 					set_mask( vectors[v], true );
 				}
@@ -183,38 +185,38 @@ lapic::calibrate( void )
 	_ticks_per_msec = ( 0xffffffff - current + 1 );
 	_ticks_per_msec = ( _ticks_per_msec > 0 ) ? _ticks_per_msec : 1;
 
-	set_mask( kLAPICInterruptTimer, false );
+	set_mask( LAPICInterrupt::kTimer, false );
 	log::printk( "LAPIC %d: %u ticks/ms\n", _id, _ticks_per_msec );
 }
 
 void
 lapic::set_route( LAPICInterrupt source, uint8_t target,
-                  IRQTriggerMode trigger, IRQPolarity polarity )
+                  TriggerMode trigger, Polarity polarity )
 {
 	uint16_t reg = kLAPICLvtLINT0;
 	switch( source )
 	{
-		case kLAPICInterruptLINT0:
+		case LAPICInterrupt::kLINT0:
 			reg = kLAPICLvtLINT0;
 			break;
 
-		case kLAPICInterruptLINT1:
+		case LAPICInterrupt::kLINT1:
 			reg = kLAPICLvtLINT1;
 			break;
 
-		case kLAPICInterruptTimer:
+		case LAPICInterrupt::kTimer:
 			reg = kLAPICLvtTimer;
 			break;
 
-		case kLAPICInterruptPerfMon:
+		case LAPICInterrupt::kPerfMon:
 			reg = kLAPICLvtPerfMon;
 			break;
 
-		case kLAPICInterruptThermal:
+		case LAPICInterrupt::kThermal:
 			reg = kLAPICLvtThermal;
 			break;
 
-		case kLAPICInterruptError:
+		case LAPICInterrupt::kError:
 			reg = kLAPICLvtError;
 			break;
 	}
@@ -234,12 +236,12 @@ lapic::set_timer( unsigned msec, bool repeat )
 void
 lapic::clr_timer( void )
 {
-	set_mask( kLAPICInterruptTimer, true );
+	set_mask( LAPICInterrupt::kTimer, true );
 	_write( kLAPICTimerInitialCount, 0 );
 }
 
 void
-lapic::set_nmi( unsigned lint_no, IRQTriggerMode trigger, IRQPolarity polarity )
+lapic::set_nmi( unsigned lint_no, TriggerMode trigger, Polarity polarity )
 {
 	if( _init_done == false )
 	{
@@ -251,18 +253,20 @@ lapic::set_nmi( unsigned lint_no, IRQTriggerMode trigger, IRQPolarity polarity )
 		return;
 	}
 
-	uint16_t reg = ( lint_no == 0 ) ? kLAPICInterruptLINT0 : kLAPICInterruptLINT1;
+	uint16_t reg = numeric( ( lint_no == 0 ) ? LAPICInterrupt::kLINT0 
+	                                         : LAPICInterrupt::kLINT1 );
 	uint32_t val = _read( reg ) & ~0x00000070; /* mask out the deliver mode */
 
-	val |= _irq_flags( trigger, polarity ) | kLAPICDeliverNMI;
+	val |= _irq_flags( trigger, polarity ) | numeric( LAPICDelivery::kNMI );
 	_write( reg, val );
 }
 
 void
 lapic::clr_nmi( unsigned lint_no )
 {
-	uint16_t reg = ( lint_no == 0 ) ? kLAPICInterruptLINT0 : kLAPICInterruptLINT1;
-	_write( reg, _read( reg ) & ~kLAPICDeliverNMI );
+	uint16_t reg = numeric( ( lint_no == 0 ) ? LAPICInterrupt::kLINT0
+	                                         : LAPICInterrupt::kLINT1 );
+	_write( reg, _read( reg ) & numeric( ~LAPICDelivery::kNMI ) );
 }
 
 void
@@ -271,27 +275,27 @@ lapic::set_mask( LAPICInterrupt source, bool masked )
 	uint16_t reg = kLAPICLvtLINT0;
 	switch( source )
 	{
-		case kLAPICInterruptLINT0:
+		case LAPICInterrupt::kLINT0:
 			reg = kLAPICLvtLINT0;
 			break;
 
-		case kLAPICInterruptLINT1:
+		case LAPICInterrupt::kLINT1:
 			reg = kLAPICLvtLINT1;
 			break;
 
-		case kLAPICInterruptTimer:
+		case LAPICInterrupt::kTimer:
 			reg = kLAPICLvtTimer;
 			break;
 
-		case kLAPICInterruptPerfMon:
+		case LAPICInterrupt::kPerfMon:
 			reg = kLAPICLvtPerfMon;
 			break;
 
-		case kLAPICInterruptThermal:
+		case LAPICInterrupt::kThermal:
 			reg = kLAPICLvtThermal;
 			break;
 
-		case kLAPICInterruptError:
+		case LAPICInterrupt::kError:
 			reg = kLAPICLvtError;
 			break;
 	}
@@ -316,31 +320,31 @@ lapic::accept_broadcast( bool accept )
 void
 lapic::send_ipi( uint8_t target, uint8_t vector )
 {
-	_send_ipi( target, LAPICBroadcast( 0 ), kLAPICDeliverFixed, vector );
+	_send_ipi( target, LAPICBroadcast( 0 ), LAPICDelivery::kFixed, vector );
 }
 
 void
 lapic::send_sipi( uint8_t target, uint8_t boot_vector )
 {
-	_send_ipi( target, LAPICBroadcast( 0 ), kLAPICDeliverSIPI, boot_vector );
+	_send_ipi( target, LAPICBroadcast( 0 ), LAPICDelivery::kSIPI, boot_vector );
 }
 
 void
 lapic::send_init( uint8_t target )
 {
-	_send_ipi( target, LAPICBroadcast( 0 ), kLAPICDeliverINIT, 0 );
+	_send_ipi( target, LAPICBroadcast( 0 ), LAPICDelivery::kINIT, 0 );
 }
 
 void
 lapic::broadcast_ipi( LAPICBroadcast mode, uint8_t vector )
 {
-	_send_ipi( 0, mode, kLAPICDeliverFixed, vector );
+	_send_ipi( 0, mode, LAPICDelivery::kFixed, vector );
 }
 
 void
 lapic::broadcast_init( LAPICBroadcast mode )
 {
-	_send_ipi( 0, mode, kLAPICDeliverINIT, 0 );
+	_send_ipi( 0, mode, LAPICDelivery::kINIT, 0 );
 }
 
 void
@@ -350,53 +354,53 @@ lapic::eoi( void )
 }
 
 uint32_t
-lapic::_irq_flags( IRQTriggerMode trigger, IRQPolarity polarity )
+lapic::_irq_flags( TriggerMode trigger, Polarity polarity )
 {
 	uint32_t res = 0;
 	switch( trigger )
 	{
-		case kIRQTriggerConform: /* FALL_THROUGH */
-		case kIRQTriggerEdge:
+		case TriggerMode::kConform: /* FALL_THROUGH */
+		case TriggerMode::kEdge:
 			res &= ~( 1 << 15 );
 			break;
 
-		case kIRQTriggerLevel:
+		case TriggerMode::kLevel:
 			res |= ( 1 << 15 );
 			break;
 
-		case kIRQTriggerReserved:
+		case TriggerMode::kReserved:
 			break;
 	}
 
 	switch( polarity )
 	{
-		case kIRQPolarityConform: /* FALL_THROUGH */
-		case kIRQPolarityHigh:
+		case Polarity::kConform: /* FALL_THROUGH */
+		case Polarity::kHigh:
 			res &= ~( 1 << 12 );
 			break;
 
-		case kIRQPolarityLow:
+		case Polarity::kLow:
 			res |= ( 1 << 12 );
 			break;
 
-		case kIRQPolarityReserved:
+		case Polarity::kReserved:
 			break;
 	}
 	return res;
 }
 
 void
-lapic::_send_ipi( uint8_t target, LAPICBroadcast mode, uint16_t delivery,
+lapic::_send_ipi( uint8_t target, LAPICBroadcast mode, LAPICDelivery delivery,
                   uint8_t vector )
 {
 	uint32_t ipi_lo = 0, ipi_hi = 0;
 
 	switch( mode )
 	{
-		case kLAPICBroadcastAll:
-		case kLAPICBroadcastSelf:
-		case kLAPICBroadcastOthers:
-			ipi_lo |= mode;
+		case LAPICBroadcast::kAll:
+		case LAPICBroadcast::kSelf:
+		case LAPICBroadcast::kOthers:
+			ipi_lo |= numeric( mode );
 		break;
 
 		default:
@@ -404,22 +408,22 @@ lapic::_send_ipi( uint8_t target, LAPICBroadcast mode, uint16_t delivery,
 		break;
 	}
 
-	ipi_lo |= delivery;
+	ipi_lo |= numeric( delivery );
 
-	switch( (LAPICDelivery)delivery )
+	switch( delivery )
 	{
-		case kLAPICDeliverFixed: /* FALL_THROUGH */
-		case kLAPICDeliverSIPI:
+		case LAPICDelivery::kFixed: /* FALL_THROUGH */
+		case LAPICDelivery::kSIPI:
 			ipi_lo |= vector;
 		break;
 
-		case kLAPICDeliverSMI: /* FALL_THROUGH */
-		case kLAPICDeliverNMI: /* FALL_THROUGH */
-		case kLAPICDeliverINIT:
+		case LAPICDelivery::kSMI: /* FALL_THROUGH */
+		case LAPICDelivery::kNMI: /* FALL_THROUGH */
+		case LAPICDelivery::kINIT:
 			/* no vector / vector should be 00 */
 		break;
 
-		case kLAPICDeliverExtINT:
+		case LAPICDelivery::kExtINT:
 			/* no-op, reserved */
 		return;
 	}

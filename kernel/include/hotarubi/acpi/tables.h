@@ -111,22 +111,24 @@ namespace acpi
 		uint64_t entries[1];
 	};
 
-	enum MADTEntryType : uint8_t
+	enum class MADTEntryType : uint8_t
 	{
-		kMADTEntryLAPIC               = 0,
-		kMADTEntryIOAPIC              = 1,
-		kMADTEntrySourceOverride      = 2,
-		kMADTEntryNMISource           = 3,
-		kMADTEntryLAPICNMI            = 4,
-		kMADTEntryLAPIAddressOverride = 5,
-		kMADTEntryLx2APIC             = 9,
-		kMADTEntryLx2APICNMI          = 10,
+		kLAPIC               = 0,
+		kIOAPIC              = 1,
+		kSourceOverride      = 2,
+		kNMISource           = 3,
+		kLAPICNMI            = 4,
+		kLAPIAddressOverride = 5,
+		kLx2APIC             = 9,
+		kLx2APICNMI          = 10,
 	};
 
-	enum MADTLAPICFlags : uint32_t
+	enum class MADTLAPICFlags : uint32_t
 	{
-		kMADTLAPICFlagEnabled  = ( 1 << 0 ),
-		kMADTLAPICFlagsMask    = 0xfffffffe,
+		kEnabled  = ( 1 << 0 ),
+		ksMask    = 0xfffffffe,
+
+		is_bitmask,
 	};
 
 	struct madt_mps_init_flags

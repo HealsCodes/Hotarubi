@@ -33,32 +33,33 @@
 #define __VMKERN memory::virtmm::kVMRangeKernelBase
 
 #define __PA( x )  ( ( ( uintptr_t )( x ) >= __VMKERN ) ? ( ( uintptr_t )( x ) - __VMKERN ) \
-                                                        : ( ( uintptr_t )( x ) & ~__VMBASE ) )
+                                                        : ( ( uintptr_t )( x ) & ~( uintptr_t )__VMBASE ) )
 
 /* BEWARE: this macro only works for addresses in kernel space! */
 #define __VA( x )  ( ( ( uintptr_t )( x ) + __VMBASE ) )
 
 /* shortcut to access PhysPageFlagSet */
-#define __PPF( x ) memory::physmm::kPPFlag ##x
+#define __PPF( x ) memory::physmm::Flags::k ##x
 
 namespace memory
 {
 namespace physmm
 {
-	enum PhysPageFlagSet : uint16_t
+	enum class Flags : uint16_t
 	{
-		kPPFlagUnused       = ( 1 << 0 ),
-		kPPFlagActive       = ( 1 << 1 ),
-		kPPFlagLocked       = ( 1 << 2 ),
-		kPPFlagReserved     = ( 1 << 3 ),
-		kPPFlagSlab         = ( 1 << 4 ),
+		kUnused       = ( 1 << 0 ),
+		kActive       = ( 1 << 1 ),
+		kLocked       = ( 1 << 2 ),
+		kReserved     = ( 1 << 3 ),
+		kSlab         = ( 1 << 4 ),
+
+		is_bitmask
 	};
-	BITMASK( PhysPageFlagSet );
 
 	struct page_map
 	{
 		struct list_head link;
-		PhysPageFlagSet flags;
+		Flags flags;
 	};
 	typedef struct page_map page_map_t;
 
@@ -69,8 +70,8 @@ namespace physmm
 
 	uint32_t free_page_count( void );
 
-	void *alloc_page( PhysPageFlagSet flags );
-	void *alloc_page_range( unsigned count, PhysPageFlagSet flags );
+	void *alloc_page( Flags flags );
+	void *alloc_page_range( unsigned count, Flags flags );
 
 	void free_page( const void *page );
 	void free_page_range( const void *page, unsigned count );

@@ -41,7 +41,7 @@ struct resource
 	phys_addr_t start;
 	phys_addr_t range;
 
-	MMIOFlagSet flags;
+	Flags flags;
 	unsigned  refcount;
 
 	struct resource *parent;
@@ -51,16 +51,17 @@ struct resource
 };
 
 static spin_lock _mmio_resource_lock;
-static resource _mmio_mem_root { "IO mem", 0, 0xffffffff, kMMIOFlagIOMem, 1, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
-static resource _mmio_port_root { "IO ports", 0, 0xffff, kMMIOFlagIOPort, 1, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
+static resource _mmio_mem_root { "IO mem", 0, 0xffffffff, Flags::kIOMem, 1, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
+static resource _mmio_port_root { "IO ports", 0, 0xffff, Flags::kIOPort, 1, nullptr, { nullptr, nullptr }, { nullptr, nullptr } };
 
 static resource_t
 _check_resource( resource_t root, phys_addr_t start, phys_addr_t range )
 {
 	/* check if we overlapp root */
-	if( ( ( start < root->start && range > root->start ) ||   /* overlaps start */
-		  ( start < root->range && range > root->range ) ) || /* overlaps range */
-		( ( start >= root->start && range <= root->range && root->flags & kMMIOFlagBusy ) ) ) /* fits but is busy */
+	if( ( ( start < root->start && range > root->start )   ||   /* overlaps start */
+	      ( start < root->range && range > root->range ) ) || /* overlaps range */
+	    ( ( start >= root->start && range <= root->range && 
+	        flag_set( root->flags, Flags::kBusy ) ) ) ) /* fits but is busy */
 	{
 		return root;
 	}
@@ -80,7 +81,8 @@ _check_resource( resource_t root, phys_addr_t start, phys_addr_t range )
 static resource_t
 _find_shared( resource_t root, phys_addr_t start, phys_addr_t range )
 {
-	if( start == root->start && range == root->range && root->flags & kMMIOFlagShared )
+	if( start == root->start && range == root->range && 
+	    flag_set( root->flags, Flags::kShared ) )
 	{
 		return root;
 	}
@@ -192,12 +194,12 @@ _release_resource( resource_t region )
 }
 
 resource_t
-request_region( const char *name, phys_addr_t start, size_t size, MMIOFlagSet flags )
+request_region( const char *name, phys_addr_t start, size_t size, Flags flags )
 {
 	resource_t request = nullptr;
-	resource_t root = ( ( flags & kMMIOFlagIOPort ) ? &_mmio_port_root
-	                                                : &_mmio_mem_root );
-	if( flags & kMMIOFlagShared )
+	resource_t root = ( flag_set( flags ,Flags::kIOPort ) ? &_mmio_port_root
+	                                                      : &_mmio_mem_root );
+	if( flag_set( flags, Flags::kShared ) )
 	{
 		_mmio_resource_lock.lock();
 		if( ( request = _find_shared( root, start, start + size ) ) != nullptr )
@@ -214,7 +216,7 @@ request_region( const char *name, phys_addr_t start, size_t size, MMIOFlagSet fl
 		request->start = start;
 		request->range = start + size;
 #ifdef KERNEL
-		request->flags = flags & ~( kMMIOFlagMapped );
+		request->flags = flags & ~( Flags::kMapped );
 #else
 		request->flags = flags;
 #endif
@@ -250,7 +252,7 @@ release_region( resource_t *region )
 virt_addr_t
 activate_region( resource_t region )
 {
-	if( region->flags & kMMIOFlagIOPort )
+	if( flag_set( region->flags, Flags::kIOPort ) )
 	{
 		/* IO-Ports are not mapped.. */
 		return ( virt_addr_t )region->start;
@@ -261,7 +263,7 @@ activate_region( resource_t region )
 	_mmio_resource_lock.lock();
 	auto tmp = region;
 	do {
-		if( tmp->flags & kMMIOFlagMapped )
+		if( flag_set( tmp->flags, Flags::kMapped ) )
 		{
 			goto out_mapped;
 		}
@@ -277,7 +279,7 @@ activate_region( resource_t region )
 	}
 
 out_mapped:
-	region->flags |= kMMIOFlagMapped;
+	region->flags |= Flags::kMapped;
 	_mmio_resource_lock.unlock();
 #endif
 	return ( virt_addr_t )( virtmm::kVMRangeIOMapBase + region->start );

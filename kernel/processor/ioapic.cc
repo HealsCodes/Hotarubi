@@ -36,14 +36,16 @@ enum IOAPICRegs
 	kIOAPICRedirectHi  = 0x11,
 };
 
-enum IOAPICDelivery : uint16_t
+enum class IOAPICDelivery : uint16_t
 {
-	kIOAPICDeliverFixed    = 0x000,
-	kIOAPICDeliverLowPrio  = 0x100,
-	kIOAPICDeliverSMI      = 0x200,
-	kIOAPICDeliverNMI      = 0x400,
-	kIOAPICDeliverINIT     = 0x500,
-	kIOAPICDeliverExtINT   = 0x700,
+	kFixed    = 0x000,
+	kLowPrio  = 0x100,
+	kSMI      = 0x200,
+	kNMI      = 0x400,
+	kINIT     = 0x500,
+	kExtINT   = 0x700,
+
+	is_bitmask
 };
 
 ioapic::~ioapic()
@@ -89,7 +91,7 @@ ioapic::init( uint64_t address, uint8_t irq_base )
 
 void
 ioapic::set_route( uint8_t source, uint8_t target,
-                   IRQTriggerMode trigger, IRQPolarity polarity )
+                   TriggerMode trigger, Polarity polarity )
 {
 	if( source < start() || source > range() )
 	{
@@ -141,7 +143,7 @@ ioapic::set_mask( uint8_t source, bool masked )
 }
 
 void
-ioapic::set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity )
+ioapic::set_nmi( uint8_t source, TriggerMode trigger, Polarity polarity )
 {
 	if( source < start() || source > range() )
 	{
@@ -151,7 +153,7 @@ ioapic::set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity )
 	uint32_t val_lo = _read( kIOAPICRedirectLo + source * 2 ) & ~0x0000e700,
 	         val_hi = _read( kIOAPICRedirectHi + source * 2 );
 
-	val_lo |= _irq_flags( trigger, polarity ) | kIOAPICDeliverNMI;
+	val_lo |= _irq_flags( trigger, polarity ) | numeric( IOAPICDelivery::kNMI );
 	_write( kIOAPICRedirectLo + source * 2, val_lo );
 	_write( kIOAPICRedirectHi + source * 2, val_hi );
 }
@@ -163,7 +165,7 @@ ioapic::clr_nmi( uint8_t source )
 	{
 		return;
 	}
-	uint32_t val_lo = _read( kIOAPICRedirectLo + source * 2 ) & ~kIOAPICDeliverNMI,
+	uint32_t val_lo = _read( kIOAPICRedirectLo + source * 2 ) & numeric( ~IOAPICDelivery::kNMI ),
 	         val_hi = _read( kIOAPICRedirectHi + source * 2 );
 
 	_write( kIOAPICRedirectLo + source * 2, val_lo );
@@ -171,37 +173,37 @@ ioapic::clr_nmi( uint8_t source )
 }
 
 uint32_t
-ioapic::_irq_flags( IRQTriggerMode trigger, IRQPolarity polarity )
+ioapic::_irq_flags( TriggerMode trigger, Polarity polarity )
 {
 	/* ISA interrupts are by default edge-triggered, active-high */
 	uint32_t res = 0;
 	switch( trigger )
 	{
-		case kIRQTriggerConform: /* FALL_THROUGH */
-		case kIRQTriggerEdge:
+		case TriggerMode::kConform: /* FALL_THROUGH */
+		case TriggerMode::kEdge:
 			res &= ~( 1 << 15 );
 			break;
 
-		case kIRQTriggerLevel:
+		case TriggerMode::kLevel:
 			res |= ( 1 << 15 );
 			break;
 
-		case kIRQTriggerReserved:
+		case TriggerMode::kReserved:
 			break;
 	}
 
 	switch( polarity )
 	{
-		case kIRQPolarityConform: /* FALL_THROUGH */
-		case kIRQPolarityHigh:
+		case Polarity::kConform: /* FALL_THROUGH */
+		case Polarity::kHigh:
 			res &= ~( 1 << 13 );
 			break;
 
-		case kIRQPolarityLow:
+		case Polarity::kLow:
 			res |= ( 1 << 13 );
 			break;
 
-		case kIRQPolarityReserved:
+		case Polarity::kReserved:
 			break;
 	}
 	return res;

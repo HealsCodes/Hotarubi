@@ -41,7 +41,7 @@ static struct gdt_pointer _gdtr;
 static void
 _setup_descriptor( struct gdt_descriptor *gdt,
                    unsigned index, uintptr_t base, uint32_t limit,
-                   GDTTypeSet type, GDTSizeFlagsSet flags )
+                   Type type, Flag flags )
 {
 	/* FIXME: check index for gdt bounds */
 	auto descr = &gdt[index];
@@ -55,14 +55,14 @@ _setup_descriptor( struct gdt_descriptor *gdt,
 	descr->base_mi  = ( base >> 16 ) & 0xff;
 	descr->base_hi  = ( base >> 20 ) & 0xff;
 
-	descr->type     = ( uint8_t )type;
-	descr->granular = ( uint8_t )flags;
+	descr->type     = numeric( type );
+	descr->granular = numeric( flags );
 }
 
 static void
 _setup_extended_descriptor( struct gdt_descriptor *gdt,
                             unsigned index, uintptr_t base, uint32_t limit,
-                            GDTTypeSet type, GDTSizeFlagsSet flags )
+                            Type type, Flag flags )
 {
 	/* FIXME: check index for gdt bounds */
 	auto descr = ( struct gdt_descriptor_extended* )&gdt[index];
@@ -77,8 +77,8 @@ _setup_extended_descriptor( struct gdt_descriptor *gdt,
 	descr->base_hi  = ( base >> 24 ) & 0xff;
 	descr->base_xt  = ( base >> 32 ) & 0xffffffff;
 
-	descr->type     = ( uint8_t )type;
-	descr->granular = ( uint8_t )flags;
+	descr->type     = numeric( type );
+	descr->granular = numeric( flags );
 }
 
 
@@ -90,8 +90,8 @@ _setup_tss_descriptor( struct gdt_descriptor *gdt, unsigned index,
 	auto limit = sizeof( struct tss::tss ) - 1;
 
 	_setup_extended_descriptor( gdt, index, base, limit, 
-	                            kGDTTypeTSS | kGDTPresent | kGDTAccessUsr,
-	                            kGDTFlagsNone );
+	                            Type::kTypeTSS | Type::kPresent | Type::kAccessUsr,
+	                            Flag::kNone );
 }
 
 void
@@ -102,13 +102,13 @@ init( void )
 
 	memset( gdt, 0, sizeof( struct gdt_descriptor ) * GDT_DESCRIPTOR_COUNT );
 
-	GDTSizeFlagsSet flags = kGDTOpSize64Bit | kGDTOpData32Bit | kGDTGranularity4KByte;
+	Flag flags = Flag::kOpSize64Bit | Flag::kOpData32Bit | Flag::kGranularity4KByte;
 
-	_setup_descriptor( gdt, 0, 0, 0, kGDTTypeNull, kGDTFlagsNone );
-	_setup_descriptor( gdt, 1, 0, 0xffffffff, kGDTTypeXR | kGDTPresent, flags );
-	_setup_descriptor( gdt, 2, 0, 0xffffffff, kGDTTypeRW | kGDTPresent, flags );
-	_setup_descriptor( gdt, 3, 0, 0xffffffff, kGDTTypeXR | kGDTAccessUsr | kGDTPresent, flags );
-	_setup_descriptor( gdt, 4, 0, 0xffffffff, kGDTTypeRW | kGDTAccessUsr | kGDTPresent, flags );
+	_setup_descriptor( gdt, 0, 0, 0, Type::kNull, Flag::kNone );
+	_setup_descriptor( gdt, 1, 0, 0xffffffff, Type::kTypeXR | Type::kPresent, flags );
+	_setup_descriptor( gdt, 2, 0, 0xffffffff, Type::kTypeRW | Type::kPresent, flags );
+	_setup_descriptor( gdt, 3, 0, 0xffffffff, Type::kTypeXR | Type::kAccessUsr | Type::kPresent, flags );
+	_setup_descriptor( gdt, 4, 0, 0xffffffff, Type::kTypeRW | Type::kAccessUsr | Type::kPresent, flags );
 
 	_setup_tss_descriptor( gdt, 5, core->tss );
 

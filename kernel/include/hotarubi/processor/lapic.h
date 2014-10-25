@@ -30,24 +30,26 @@
 
 namespace processor
 {
+	enum class LAPICDelivery : uint16_t;
+
 	class lapic
 	{
 	public:
-		enum LAPICInterrupt
+		enum class LAPICInterrupt
 		{
-			kLAPICInterruptLINT0   = 1,
-			kLAPICInterruptLINT1   = 2,
-			kLAPICInterruptTimer   = 3,
-			kLAPICInterruptPerfMon = 4,
-			kLAPICInterruptThermal = 5,
-			kLAPICInterruptError   = 6,
+			kLINT0   = 1,
+			kLINT1   = 2,
+			kTimer   = 3,
+			kPerfMon = 4,
+			kThermal = 5,
+			kError   = 6,
 		};
 
-		enum LAPICBroadcast : uint32_t
+		enum class LAPICBroadcast : uint32_t
 		{
-			kLAPICBroadcastAll     = 0x80000,
-			kLAPICBroadcastOthers  = 0xc0000,
-			kLAPICBroadcastSelf    = 0x40000,
+			kAll     = 0x80000,
+			kOthers  = 0xc0000,
+			kSelf    = 0x40000,
 		};
 
 		lapic( uint8_t id, uint32_t address );
@@ -58,14 +60,14 @@ namespace processor
 		void calibrate( void );
 
 		void set_route( LAPICInterrupt source, uint8_t target,
-		                IRQTriggerMode trigger=kIRQTriggerConform, 
-		                IRQPolarity polarity=kIRQPolarityConform );
+		                TriggerMode trigger=TriggerMode::kConform, 
+		                Polarity polarity=Polarity::kConform );
 		void set_mask( LAPICInterrupt source, bool masked );
 
 		void set_timer( unsigned msec, bool repeat=false );
 		void clr_timer( void );
 
-		void set_nmi( unsigned lint_no, IRQTriggerMode trigger, IRQPolarity polarity );
+		void set_nmi( unsigned lint_no, TriggerMode trigger, Polarity polarity );
 		void clr_nmi( unsigned lint_no );
 
 		void accept_broadcast( bool accept );
@@ -84,10 +86,10 @@ namespace processor
 		uint8_t version( void ) const { return _version; };
 
 	private:
-		uint32_t _irq_flags( IRQTriggerMode trigger, IRQPolarity polarity );
+		uint32_t _irq_flags( TriggerMode trigger, Polarity polarity );
 
 		void _send_ipi( uint8_t target, LAPICBroadcast mode,
-		                uint16_t delivery, uint8_t vector );
+		                LAPICDelivery delivery, uint8_t vector );
 
 		uint32_t _read( uint16_t reg );
 		void _write( uint16_t reg, uint32_t val );
@@ -105,8 +107,8 @@ namespace processor
 		uint8_t                  _init_id   = 0;
 		uint32_t                 _init_addr = 0;
 		unsigned                 _init_nmi  = 0xff;
-		IRQTriggerMode           _init_nmi_trigger  = kIRQTriggerConform;
-		IRQPolarity              _init_nmi_polarity = kIRQPolarityConform;
+		TriggerMode              _init_nmi_trigger  = TriggerMode::kConform;
+		Polarity                 _init_nmi_polarity = Polarity::kConform;
 	};
 };
 

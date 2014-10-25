@@ -114,7 +114,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 	{
 		switch( entry->type )
 		{
-			case kMADTEntryLAPIC:
+			case MADTEntryType::kLAPIC:
 			{
 				++core_count;
 			
@@ -123,15 +123,15 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 				break;
 			}
 
-			case kMADTEntryIOAPIC:
+			case MADTEntryType::kIOAPIC:
 				++ioapic_count;
 				break;
 
-			case kMADTEntrySourceOverride:
+			case MADTEntryType::kSourceOverride:
 			{
 				auto desc     = ( madt_source_override* )entry;
-				auto trigger  = processor::IRQTriggerMode( desc->flags.trigger );
-				auto polarity = processor::IRQPolarity( desc->flags.polarity );
+				auto trigger  = processor::TriggerMode( desc->flags.trigger );
+				auto polarity = processor::Polarity( desc->flags.polarity );
 				auto irq      = processor::core::irqs( desc->source_irq );
 				if( irq != nullptr )
 				{
@@ -141,7 +141,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 				break;
 			}
 
-			case kMADTEntryLAPIAddressOverride:
+			case MADTEntryType::kLAPIAddressOverride:
 			{
 				auto desc = ( madt_lapic_address_override* )entry;
 				lapic_base = desc->lapic_base;
@@ -182,7 +182,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 	{
 		switch( entry->type )
 		{
-			case kMADTEntryLAPIC:
+			case MADTEntryType::kLAPIC:
 			{
 				auto desc   = ( madt_lapic_entry* )entry;
 				auto lapic  = new processor::lapic( desc->apic_id, lapic_base );
@@ -193,7 +193,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 				break;
 			}
 
-			case kMADTEntryIOAPIC:
+			case MADTEntryType::kIOAPIC:
 			{
 				auto desc   = ( madt_ioapic_entry* )entry;
 				auto ioapic = &ioapics[ioapic_count++];
@@ -229,11 +229,11 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 	{
 		switch( entry->type )
 		{
-			case kMADTEntryNMISource:
+			case MADTEntryType::kNMISource:
 			{
 				auto desc = ( madt_nmi_source* )entry;
-				auto trigger  = processor::IRQTriggerMode( desc->flags.trigger );
-				auto polarity = processor::IRQPolarity( desc->flags.polarity );
+				auto trigger  = processor::TriggerMode( desc->flags.trigger );
+				auto polarity = processor::Polarity( desc->flags.polarity );
 
 				log::printk( "acpi: IRQ %02x, global NMI\n", desc->global_irq );
 				if( processor::core::set_nmi( desc->global_irq, trigger, polarity ) == false )
@@ -243,11 +243,11 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 				break;
 			}
 
-			case kMADTEntryLAPICNMI:
+			case MADTEntryType::kLAPICNMI:
 			{
 				auto desc = ( madt_lapic_nmi* )entry;
-				auto trigger  = processor::IRQTriggerMode( desc->flags.trigger );
-				auto polarity = processor::IRQPolarity( desc->flags.polarity );
+				auto trigger  = processor::TriggerMode( desc->flags.trigger );
+				auto polarity = processor::Polarity( desc->flags.polarity );
 
 				log::printk( "acpi: LINT%d, NMI ", desc->lint);
 				if( desc->processor_id == 255 )

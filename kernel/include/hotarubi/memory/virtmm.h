@@ -26,40 +26,41 @@
 #include <hotarubi/types.h>
 
 /* shortcut to access PhysPageFlagSet */
-#define __VPF( x ) memory::virtmm::kVPFlag ##x
+#define __VPF( x ) memory::virtmm::Flags::k ##x
 
 namespace memory
 {
 namespace virtmm
 {
-	enum VirtPageFlagSet : uint64_t
+	enum class Flags : uint64_t
 	{
-		kVPFlagNone         = 0,
-		kVPFlagPresent      = 1 << 0,
-		kVPFlagWritable     = 1 << 1,
-		kVPFlagUser         = 1 << 2,
-		kVPFlagWriteThrough = 1 << 3,
-		kVPFlagCacheDisable = 1 << 4,
-		kVPFlagAccessed     = 1 << 5,
-		kVPFlagDirty        = 1 << 6,
-		kVPFlagSizeExtend   = 1 << 7,
-		kVPFlagGlobal       = 1 << 8,
+		kNone         = 0,
+		kPresent      = 1 << 0,
+		kWritable     = 1 << 1,
+		kUser         = 1 << 2,
+		kWriteThrough = 1 << 3,
+		kCacheDisable = 1 << 4,
+		kAccessed     = 1 << 5,
+		kDirty        = 1 << 6,
+		kSizeExtend   = 1 << 7,
+		kGlobal       = 1 << 8,
 
-		kVPFlagCopyOnWrite  = 1 << 9,
-		kVPFlagSparse       = 1 << 10,
-		kVPFlagSwappedOut   = 1 << 11,
+		kCopyOnWrite  = 1 << 9,
+		kSparse       = 1 << 10,
+		kSwappedOut   = 1 << 11,
 
-		kVPFlagNoExecute    = 0x8000000000000000UL,
-		kVPFlagMask         = 0xffe0000000000fffUL,
-		kVPFlagMask2M       = 0xffe00000000fffffUL,
+		kNoExecute    = 0x8000000000000000UL,
+		kMask         = 0xffe0000000000fffUL,
+		kMask2M       = 0xffe00000000fffffUL,
+
+		is_bitmask
 	};
-	BITMASK( VirtPageFlagSet );
 
 	extern const virt_addr_t map_invalid;
 
-	bool map_address( virt_addr_t vaddr, VirtPageFlagSet flags );
-	bool map_fixed( virt_addr_t vaddr, phys_addr_t paddr, VirtPageFlagSet flags );
-	bool map_address_range( virt_addr_t vaddr, size_t npages, VirtPageFlagSet flags );
+	bool map_address( virt_addr_t vaddr, Flags flags );
+	bool map_fixed( virt_addr_t vaddr, phys_addr_t paddr, Flags flags );
+	bool map_address_range( virt_addr_t vaddr, size_t npages, Flags flags );
 
 	void unmap_address( virt_addr_t vaddr );
 	void unmap_fixed( virt_addr_t vaddr );

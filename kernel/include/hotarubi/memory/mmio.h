@@ -27,27 +27,28 @@
 #include <bitmask.h>
 #include <hotarubi/types.h>
 
-#define __MMIO( x ) memory::mmio::kMMIOFlag ##x
+#define __MMIO( x ) memory::mmio::Flags::k ##x
 
 namespace memory
 {
 namespace mmio
 {
-	enum MMIOFlagSet
+	enum class Flags
 	{
-		kMMIOFlagBusy    = ( 1 << 0 ),
-		kMMIOFlagShared  = ( 1 << 4 ),
-		kMMIOFlagMapped  = ( 1 << 5 ),
+		kBusy    = ( 1 << 0 ),
+		kShared  = ( 1 << 4 ),
+		kMapped  = ( 1 << 5 ),
 		/* type flags */
-		kMMIOFlagIOPort  = ( 1 << 6 ),
-		kMMIOFlagIOMem   = ( 1 << 7 ),
+		kIOPort  = ( 1 << 6 ),
+		kIOMem   = ( 1 << 7 ),
+
+		is_bitmask
 	};
-	BITMASK( MMIOFlagSet );
 
 	typedef struct resource *resource_t;
 
 	resource_t request_region( const char *name, phys_addr_t start, size_t size,
-	                           MMIOFlagSet flags );
+	                           Flags flags );
 
 	void release_region( resource_t *region );
 

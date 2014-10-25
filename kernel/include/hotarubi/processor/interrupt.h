@@ -30,32 +30,32 @@ namespace processor
 {
 	#define NUM_IRQ_ENTRIES 255
 
-	enum IRQTriggerMode : uint8_t
+	enum class TriggerMode : uint8_t
 	{
-		kIRQTriggerConform  = 0x00,
-		kIRQTriggerEdge     = 0x01,
-		kIRQTriggerReserved = 0x02,
-		kIRQTriggerLevel    = 0x03,
+		kConform  = 0x00,
+		kEdge     = 0x01,
+		kReserved = 0x02,
+		kLevel    = 0x03,
 	};
 
-	enum IRQPolarity : uint8_t
+	enum Polarity : uint8_t
 	{
-		kIRQPolarityConform  = 0x00,
-		kIRQPolarityHigh     = 0x01,
-		kIRQPolarityReserved = 0x02,
-		kIRQPolarityLow      = 0x03,
+		kConform  = 0x00,
+		kHigh     = 0x01,
+		kReserved = 0x02,
+		kLow      = 0x03,
 	};
 
 	struct interrupt
 	{
 		uint8_t source;
 		uint8_t target;
-		IRQTriggerMode trigger;
-		IRQPolarity    polarity;
+		TriggerMode trigger;
+		Polarity    polarity;
 
 		void setup( uint8_t src, uint8_t tgt, 
-		            IRQTriggerMode trgr=kIRQTriggerConform,
-		            IRQPolarity    pola=kIRQPolarityConform )
+		            TriggerMode trgr=TriggerMode::kConform,
+		            Polarity    pola=Polarity::kConform )
 		{
 			source   = src;
 			target   = tgt;
@@ -63,26 +63,26 @@ namespace processor
 			polarity = pola;
 		};
 
-		static const char* str( IRQTriggerMode mode )
+		static const char* str( TriggerMode mode )
 		{
 			switch( mode )
 			{
-				case kIRQTriggerConform:  return "CF";
-				case kIRQTriggerEdge:     return "ET";
-				case kIRQTriggerReserved: return "RESERVED";
-				case kIRQTriggerLevel:    return "LT";
+				case TriggerMode::kConform:  return "CF";
+				case TriggerMode::kEdge:     return "ET";
+				case TriggerMode::kReserved: return "RESERVED";
+				case TriggerMode::kLevel:    return "LT";
 			}
 			return "??";
 		}
 
-		static const char* str( IRQPolarity polarity )
+		static const char* str( Polarity polarity )
 		{
 			switch( polarity )
 			{
-				case kIRQPolarityConform:  return "CF";
-				case kIRQPolarityLow:      return "LO";
-				case kIRQPolarityReserved: return "RESERVED";
-				case kIRQPolarityHigh:     return "HI";
+				case Polarity::kConform:  return "CF";
+				case Polarity::kLow:      return "LO";
+				case Polarity::kReserved: return "RESERVED";
+				case Polarity::kHigh:     return "HI";
 			}
 			return "??";
 		}
@@ -90,8 +90,8 @@ namespace processor
 		bool override( void )
 		{
 			return ( ( source   != target ) ||
-			         ( trigger  != kIRQTriggerConform ) ||
-			         ( polarity != kIRQPolarityConform ) );
+			         ( trigger  != TriggerMode::kConform ) ||
+			         ( polarity != Polarity::kConform ) );
 		};
 	};
 };

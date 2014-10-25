@@ -49,30 +49,33 @@ extern "C" uint8_t L_interrupt_swapgs_fast[], L_interrupt_swapgs_slow[];
 
 namespace idt
 {
-enum IDTTypeSet
+
+enum class Type
 {
-	kIDTAccessSys           = 0,
-	kIDTAccessUsr           = 0x60,
-	kIDTPresent             = 0x80,
+	kAccessSys = 0x00,
+	kAccessUsr = 0x60,
+	kPresent   = 0x80,
 
-	kIDTTypeIRQ             = 0x0e,
-	kIDTTypeTrap            = 0x0f,
+	kTypeIRQ   = 0x0e,
+	kTypeTrap  = 0x0f,
+
+	is_bitmask
 };
-BITMASK( IDTTypeSet );
 
-enum IDTStackSet
+enum class Stack
 {
-	kIDTStackNone           = 0,
+	kNone   = 0,
 
-	kIDTStack1              = 1,
-	kIDTStack2              = 2,
-	kIDTStack3              = 3,
-	kIDTStack4              = 4,
-	kIDTStack5              = 5,
-	kIDTStack6              = 6,
-	kIDTStack7              = 7,
+	kStack1 = 1,
+	kStack2 = 2,
+	kStack3 = 3,
+	kStack4 = 4,
+	kStack5 = 5,
+	kStack6 = 6,
+	kStack7 = 7,
+
+	is_bitmask
 };
-BITMASK( IDTStackSet );
 
 #pragma pack( push, 1 )
 
@@ -133,7 +136,7 @@ _default_irq_stub( irq_stack_frame_t &stack )
 static void
 _setup_idt_descriptor( struct idt_descriptor *idt, unsigned index,
                        uintptr_t target, uint16_t selector,
-                       IDTStackSet stack, IDTTypeSet type )
+                       Stack stack, Type type )
 {
 	struct idt_descriptor *descr = &idt[index];
 
@@ -143,8 +146,8 @@ _setup_idt_descriptor( struct idt_descriptor *idt, unsigned index,
 	descr->target_hi = ( target >> 16 ) & 0xffff;
 	descr->target_xt = ( target >> 32 ) & 0xffffffff;
 	descr->selector  = selector;
-	descr->type      = type;
-	descr->ist       = stack;
+	descr->type      = numeric( type );
+	descr->ist       = numeric( stack );
 }
 
 static bool
@@ -222,8 +225,8 @@ register_irq_handler( unsigned &index, irq_handler_fn fn,
 			_setup_idt_descriptor( idt, IDT_RESERVED + i, 
 			                       ( uintptr_t )stub,
 			                       0x08, 
-			                       kIDTStackNone,
-			                       kIDTTypeIRQ | kIDTPresent | kIDTAccessSys );
+			                       Stack::kNone,
+			                       Type::kTypeIRQ | Type::kPresent | Type::kAccessSys );
 
 			index = IDT_RESERVED + i;
 			return true;
@@ -257,7 +260,7 @@ release_irq_handler( unsigned index )
 	context[1] = 0xffffffff;
 
 	_interrupt_pointer_table[index] = ( uintptr_t )0xbadf00d;
-	idt[index].type &= ~kIDTPresent;
+	idt[index].type &= ( uint8_t )~Type::kPresent;
 }
 
 void
@@ -285,28 +288,28 @@ init( void )
 				register_system_handler( i, _default_irq_stub );
 			}
 
-			IDTTypeSet  type;
-			IDTStackSet stack;
+			Type  type;
+			Stack stack;
 			switch( i )
 			{
 				case  1: /* #DB  */
-					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
-					stack = kIDTStack1;
+					type  = Type::kTypeIRQ | Type::kPresent | Type::kAccessSys;
+					stack = Stack::kStack1;
 					break;
 
 				case  2: /* #NMI */
-					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
-					stack = kIDTStack2;
+					type  = Type::kTypeIRQ | Type::kPresent | Type::kAccessSys;
+					stack = Stack::kStack2;
 					break;
 
 				case  8: /* #DF  */
-					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
-					stack = kIDTStack3;
+					type  = Type::kTypeIRQ | Type::kPresent | Type::kAccessSys;
+					stack = Stack::kStack3;
 					break;
 
 				case 18: /* #MC  */
-					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
-					stack = kIDTStack4;
+					type  = Type::kTypeIRQ | Type::kPresent | Type::kAccessSys;
+					stack = Stack::kStack4;
 					break;
 
 				case 15:        /* not used */
@@ -314,18 +317,18 @@ init( void )
 					continue;
 
 				case 32: /* syscall */
-					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessUsr;
-					stack = kIDTStackNone;
+					type  = Type::kTypeIRQ | Type::kPresent | Type::kAccessUsr;
+					stack = Stack::kNone;
 					break;
 
 				case 33 ... IDT_DESCRIPTORS:
-					type  = kIDTTypeIRQ | kIDTAccessSys;
-					stack = kIDTStackNone;
+					type  = Type::kTypeIRQ | Type::kAccessSys;
+					stack = Stack::kNone;
 					break;
 
 				default:
-					type  = kIDTTypeIRQ | kIDTPresent | kIDTAccessSys;
-					stack = kIDTStackNone;
+					type  = Type::kTypeIRQ | Type::kPresent | Type::kAccessSys;
+					stack = Stack::kNone;
 					break;
 			}
 			_setup_idt_descriptor( idt, i, stub_base, 0x08, stack, type );

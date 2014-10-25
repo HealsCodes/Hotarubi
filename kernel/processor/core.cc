@@ -134,7 +134,7 @@ core::route_isa_irq( uint8_t source, uint8_t target )
 }
 
 bool
-core::set_nmi( uint8_t source, IRQTriggerMode trigger, IRQPolarity polarity )
+core::set_nmi( uint8_t source, TriggerMode trigger, Polarity polarity )
 {
 	auto irq = irqs( source );
 

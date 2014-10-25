@@ -648,7 +648,7 @@ mem_cache_t get_cache( void *ptr )
 	if( ptr != nullptr )
 	{
 		auto map = physmm::get_page_map( __PA( ptr ) );
-		if( map != nullptr && map->flags & __PPF( Slab ) )
+		if( map != nullptr && flag_set( map->flags, __PPF( Slab ) ) )
 		{
 			return ( mem_cache_t )map->link.next;
 		}

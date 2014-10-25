@@ -32,40 +32,42 @@ namespace gdt
 
 	#define GDT_DESCRIPTOR_COUNT 7
 
-	enum GDTTypeSet
+	enum class Type
 	{
-		kGDTTypeNull            = 0,
+		kNull         = 0x00,
 
-		kGDTAccessSys           = 0,
-		kGDTAccessUsr           = 0x60,
-		kGDTPresent             = 0x80,
+		kAccessSys    = 0x00,
+		kAccessUsr    = 0x60,
+		kPresent      = 0x80,
 
-		kGDTTypeXO              = 0x18,
-		kGDTTypeXR              = 0x1a,
+		kTypeXO       = 0x18,
+		kTypeXR       = 0x1a,
 
-		kGDTTypeRO              = 0x10,
-		kGDTTypeRW              = 0x12,
-		kGDTTypeStackRO         = 0x14,
-		kGDTTypeStackRW         = 0x16,
+		kTypeRO       = 0x10,
+		kTypeRW       = 0x12,
+		kTypeStackRO  = 0x14,
+		kTypeStackRW  = 0x16,
 
-		kGDTTypeTSS             = 0x09,
-		kGDTTypeCallGate        = 0x0c
+		kTypeTSS      = 0x09,
+		kTypeCallGate = 0x0c,
+
+		is_bitmask
 	};
-	BITMASK( GDTTypeSet );
 
-	enum GDTSizeFlagsSet
+	enum class Flag
 	{
-		kGDTFlagsNone          = 0x00,
+		kNone               = 0x00,
 
-		kGDTGranularityByte    = 0x00,
-		kGDTGranularity4KByte  = 0x08,
+		kGranularityByte    = 0x00,
+		kGranularity4KByte  = 0x08,
 
-		kGDTOpData32Bit        = 0x00,
-		kGDTOpData64Bit        = 0x04,
-		kGDTOpSize32Bit        = 0x00,
-		kGDTOpSize64Bit        = 0x02,
+		kOpData32Bit        = 0x00,
+		kOpData64Bit        = 0x04,
+		kOpSize32Bit        = 0x00,
+		kOpSize64Bit        = 0x02,
+
+		is_bitmask
 	};
-	BITMASK( GDTSizeFlagsSet );
 
 	/* basic descriptor used in 32- and 64bit modes */
 	struct gdt_descriptor

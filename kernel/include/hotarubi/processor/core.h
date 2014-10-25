@@ -49,8 +49,8 @@ namespace processor
 
 		static bool is_bsp( void );
 		static bool route_isa_irq( uint8_t source, uint8_t target );
-		static bool set_nmi( uint8_t source, IRQTriggerMode trigger,
-		                                     IRQPolarity polarity );
+		static bool set_nmi( uint8_t source, TriggerMode trigger,
+		                                     Polarity polarity );
 
 		static pit *timer( void );
 

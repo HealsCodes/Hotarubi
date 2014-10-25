@@ -26,7 +26,7 @@
 
 namespace log
 {
-	int printk( const char*, ... ){}
+	int printk( const char *s, ... ){ return strlen( s ); }
 };
 
 #define SET_MEMORY_MAP( map, used ) do { \
