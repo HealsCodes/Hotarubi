@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdarg.h>
+#include <limits.h>
 
 #include "gtest/gtest.h"
 #include "../_vcbprintf.cc"
