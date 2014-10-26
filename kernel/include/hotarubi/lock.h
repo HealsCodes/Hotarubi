@@ -28,25 +28,25 @@
 #include <hotarubi/io.h>
 #include <hotarubi/processor/core.h>
 
+#include <atomic>
+
 class spin_lock
 {
 public:
-	spin_lock() : _lock{0} {};
-
-	bool check( void ){ return _lock == 0; }
+	spin_lock() : _lock{ATOMIC_FLAG_INIT} {};
 
 	void lock( void )
 	{
-		do {} while( __atomic_test_and_set( &_lock, __ATOMIC_ACQUIRE ) );
+		do {} while( _lock.test_and_set( std::memory_order_acquire ) );
 	}
 
 	void unlock( void )
 	{
-		__atomic_clear( &_lock, __ATOMIC_RELEASE );
+		_lock.clear( std::memory_order_release );
 	}
 
 private:
-	volatile uint8_t _lock = 0;
+	std::atomic_flag _lock = ATOMIC_FLAG_INIT;
 };
 
 class spin_lock_irqsafe : public spin_lock
