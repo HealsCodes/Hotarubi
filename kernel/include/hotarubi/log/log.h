@@ -32,6 +32,11 @@
     	for( ; ; ){ __asm__ __volatile__( "hlt" ); }; \
     } while( 0 )
 
+#define panic( msg, ... ) do { \
+    	log::printk( "PANIC " msg, ##__VA_ARGS__ ); \
+    	for( ; ; ){ __asm__ __volatile__( "hlt" ); }; \
+    } while( 0 )
+
 namespace log
 {
 	void init_printk( void );

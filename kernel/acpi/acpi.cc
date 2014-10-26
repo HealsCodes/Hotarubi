@@ -92,8 +92,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 	auto madt = ( struct madt* )_get_table( ACPI_MADT_SIG );
 	if( madt == nullptr )
 	{
-		log::printk( "acpi: No MADT table available!\n" );
-		do { __asm__ __volatile__( "hlt" ); } while( 1 );
+		panic( "acpi: No MADT table available!" );
 	}
 
 	if( madt->flags & 1 )
@@ -161,8 +160,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 	}
 	else
 	{
-		log::printk( "acpi: no processor detected - wait WHAT!?\n" );
-		do{ __asm__ __volatile__( "hlt" ); }while( 1 );
+		panic( "acpi: no processor detected - wait WHAT!?" );
 	}
 	if( ioapic_count > 0 )
 	{
@@ -171,8 +169,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 	}
 	else
 	{
-		log::printk( "acpi: no IOAPICs - wait WHAT!?\n" );
-		do{ __asm__ __volatile__( "hlt" ); }while( 1 );
+		panic( "acpi: no IOAPICs - wait WHAT!?" );
 	}
 
 	/* second run: configure them */
@@ -307,9 +304,7 @@ init_tables( void )
 				rsdt = ( struct rsdt* )__VA( rsd_ptr->rsdt_ptr );
 				if( !rsdt->check( ACPI_RSDT_SIG ) )
 				{
-					/* FIXME: PANIC */
-					log::printk( "acpi: RSDT is INVALID!\n" );
-					do {} while( 0 );
+					panic( "acpi: RSDT is INVALID!" );
 				}
 				log::printk( "acpi: RSDT version %d (%6.6s)\n",
 				             rsdt->revision, rsdt->oem_id );
@@ -320,9 +315,7 @@ init_tables( void )
 				xsdt = ( struct xsdt* )__VA( rsd_ptr->xsdt_ptr );
 				if( !xsdt->check( ACPI_XSDT_SIG ) )
 				{
-					/* FIXME: PANIC */
-					log::printk( "acpi: XSDT is INVALID!\n" );
-					do {} while( 0 );
+					panic( "acpi: XSDT is INVALID!" );
 				}
 				log::printk( "acpi: XSDT version %d (%6.6s)\n",
 				             xsdt->revision, xsdt->oem_id );

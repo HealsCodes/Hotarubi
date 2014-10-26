@@ -204,8 +204,7 @@ init( void )
 
 		if( core::current()->lapic == nullptr )
 		{
-			log::printk( "No LAPIC available and this is the bootstrap processor!\n" );
-			do{}while( 1 );
+			panic( "No LAPIC available and this is the bootstrap processor!" );
 		}
 
 		core::current()->lapic->init();

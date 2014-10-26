@@ -248,8 +248,7 @@ void _create_system_vm( void )
 	return;
 
 error_out:
-	log::printk( "\nPANIC: out of memory while creating the system VM!\n" );
-	do {} while( 1 );
+	panic( "out of memory while creating the system VM!" );
 }
 
 bool

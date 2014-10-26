@@ -251,8 +251,7 @@ init( const multiboot_info_t *boot_info )
 		/* FIXME: this *will fail* due to BIOS / chipset mappings
 		 *        if there are exactly 16MB installed..
 		 */
-		log::printk( "\nPANIC: not enough physical RAM installed at least 16MB are required!\n" );
-		do {} while( 1 );
+		panic( "not enough physical RAM installed at least 16MB are required!\n" );
 	}
 
 	log::printk( "-----------------------------------------\n" );
@@ -284,9 +283,7 @@ init( const multiboot_info_t *boot_info )
 	auto page_map_size = sizeof( page_map_t ) * _memory_map_size * 8;
 	if( first_free + _memory_map_size + page_map_size > first_chunk_above_1mb )
 	{
-		// FIXME: I need a panic() method!
-		log::printk( "\nPANIC: not enough free RAM to initialize memory bitmap!\n" );
-		do {} while( 1 );
+		panic( "not enough free RAM to initialize memory bitmap!" );
 	}
 	first_free += sizeof( phys_addr_t );
 	_memory_map_data = ( uint32_t* )first_free;

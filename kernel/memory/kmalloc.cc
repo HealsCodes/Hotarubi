@@ -118,7 +118,7 @@ kfree( void *ptr )
 {
 	if( ptr == nullptr )
 	{
-		log::printk( "kfree: attempting to free a nullptr!\n" );
+		panic( "kfree: attempting to free a nullptr!" );
 		return;
 	}
 
@@ -128,8 +128,8 @@ kfree( void *ptr )
 		memory::cache::put_object( cache, ptr );
 		return;
 	}
-	log::printk( "kfree: attempting to free %p which is not managed by kmalloc!\n",
-	             ptr );
+	panic( "kfree: attempting to free %p which is not managed by kmalloc!",
+	       ptr );
 }
 
 void*

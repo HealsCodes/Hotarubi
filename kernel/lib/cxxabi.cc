@@ -25,6 +25,7 @@
  */
 #include <cstddef>
 #include <cstdint>
+#include <hotarubi/log/log.h>
 
 #define CXXRT_MAX_ATEXIT_FUNCS 256 /* who want's 256 global class instances? */
 
@@ -106,7 +107,7 @@ __cxa_finalize( void *destructor_func )
 extern "C" void
 __cxa_pure_virtual( void )
 {
-	/* FIXME: panic() ? */
+	panic( "__cxa_pure_virtual function called." );
 }
 
 static __guard guard_mutex = 0;

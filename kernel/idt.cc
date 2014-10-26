@@ -276,8 +276,7 @@ init( void )
 
 		if( _detect_patch_offsets() == false )
 		{
-			log::printk( "Unable to determine interrupt stub patch offsets!\n" );
-			do{}while( 1 );
+			panic( "Unable to determine interrupt stub patch offsets!" );
 		}
 
 		memset( idt, 0, sizeof( idt ) );
