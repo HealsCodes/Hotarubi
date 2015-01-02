@@ -10,6 +10,7 @@
     - --disable-nls
     - --disable-werror
     - --target x86_64-elf
+    - host_configargs="--enable-targets=x86_64-elf,x86_64-pe"
 
   :nasm:
     :uri: http://www.nasm.us/pub/nasm/releasebuilds/2.11.05/nasm-2.11.05.tar.bz2
