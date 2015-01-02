@@ -228,6 +228,9 @@ namespace :toolchain do
       end
     end
 
+    task :fetch  => source_arch
+    task :unpack => source_path
+
     # setup the build target
     deps = [ source_path ] + ( meta[ :deps ] ||= [] ) + ( meta[ deps_host ] ||= [] )
 
