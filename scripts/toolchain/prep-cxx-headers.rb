@@ -57,6 +57,11 @@ def search_header( source_root, header )
   Dir.glob( "#{source_root}/**/#{header}" ).each do |match|
     unless File.directory? match
       location = match
+      if location =~ /\/(tr\d)\//
+        puts "Ignoring #{$1} version of #{header}.."
+        next
+      end
+
       File.open( match ).grep( /^\s*#\s*include\s*<[^>]+>/ ) do |line|
         line.gsub!( /^\s*#\s*include\s*<([^>\n]+)>/, '\1' )
         depends << line.strip unless depends.include? line
