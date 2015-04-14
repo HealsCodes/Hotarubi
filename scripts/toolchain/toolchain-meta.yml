@@ -3,7 +3,7 @@
     :uri: http://ftp.gnu.org/gnu/binutils/binutils-2.25.tar.bz2
     :md5: d9f3303f802a5b6b0bb73a335ab89d66
     :sha: 22defc65cfa3ef2a3395faaea75d6331c6e62ea5dfacfed3e2ec17b08c882923
-    :size: 22716802
+    :size: 24049133
     :config_flags:
     - --enable-static
     - --disable-shared
@@ -29,7 +29,7 @@
     :uri: http://gcc.cybermirror.org/releases/gcc-4.9.2/gcc-4.9.2.tar.bz2
     :md5: 4df8ee253b7f3863ad0b86359cd39c43
     :sha: 2020c98295856aa13fda0f2f3a4794490757fc24bcca918d52cc8b4917b972dd
-    :size: 89854120
+    :size: 89939747
     :targets: [ all-gcc, install-strip-gcc, all-target-libgcc, install-target-libgcc ]
     :prepare:
         - /@TOP@/scripts/toolchain/prep-cxx-headers.rb @PREFIX@ @PWD@
