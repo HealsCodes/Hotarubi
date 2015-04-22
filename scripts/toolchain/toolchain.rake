@@ -33,7 +33,7 @@ $silent  = ""
 
 def _show_progress
   if ENV['TRAVIS'] or ENV['QUIET']
-    dots = Thread.new { while true do print '..'; sleep 60; end }
+    dots = Thread.new { while true do print '.'; sleep 30; end }
     dots
   end
   nil
@@ -118,7 +118,12 @@ namespace :toolchain do
         error = nil
         begin
           length = 0
-          progress_proc = lambda { |size| print ".. fetching #{source_arch} [#{size / 1024}/#{length / 1024}kb]...    \r" }
+          progress_proc = lambda do |size|
+            length ||= meta[:size] # some servers don't send a content length..
+            return if size.nil? or length.nil?
+
+            print ".. fetching #{source_arch} [#{size / 1024}/#{length / 1024}kb]...    \r"
+          end
           
           unless $silent.empty?
             # no progress on Travis-CI builds
