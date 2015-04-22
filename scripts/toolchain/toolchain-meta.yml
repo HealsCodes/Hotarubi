@@ -92,6 +92,7 @@
     :size: 9753564
     :patches:
     - grub-2.02~beta2_native_clang_OSX_build.patch
+    - grub-2.02~beta2_OSX_yosemite.patch
     - grub-2.02~beta2_multiarch.patch
     :prepare: [ autoreconf -f -i, chmod +x setup-multiarch && ./setup-multiarch ]
     :config_flags:
