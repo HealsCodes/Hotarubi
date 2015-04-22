@@ -13,6 +13,7 @@ before_install:
 - sudo apt-get -qq update
 - sudo apt-get -qq install automake
 - sudo apt-get -qq install g++-4.8
+- sudo apt-get -qq install texinfo
 - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90
 - openssl aes-256-cbc -K $encrypted_2d08df12a66b_key -iv $encrypted_2d08df12a66b_iv -in scripts/travis-store.key.enc -out scripts/travis-store.key -d
 - chmod 0600 scripts/travis-store.key
