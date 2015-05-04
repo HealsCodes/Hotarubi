@@ -28,6 +28,7 @@
 #include <hotarubi/boot/multiboot.h>
 
 #include <hotarubi/release.h>
+#include <new>
 
 extern "C" void _init( void );
 
@@ -47,7 +48,6 @@ kernel_entry( uint32_t loader_magic, struct multiboot_info *multiboot_info )
 	memory::init( multiboot_info );
 
 	processor::init();
-
 	__UNDER_CONSTRUCTION__;
 }
 

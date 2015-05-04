@@ -1,6 +1,6 @@
 /*******************************************************************************
 
-    Copyright (C) 2014  René 'Shirk' Köcher
+    Copyright (C) 2014,2015  René 'Shirk' Köcher
  
     This file is part of Hotarubi.
 
@@ -32,6 +32,8 @@
 #include <hotarubi/io.h>
 #include <hotarubi/memory.h>
 #include <hotarubi/log/log.h>
+
+#include <new>
 
 namespace acpi
 {
@@ -156,7 +158,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 	if( core_count > 0 )
 	{
 		log::printk( "acpi: detected %i processors\n", core_count );
-		aps = new processor::core[core_count - 1];
+		aps = new( std::nothrow ) processor::core[core_count - 1];
 	}
 	else
 	{
@@ -165,7 +167,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 	if( ioapic_count > 0 )
 	{
 		log::printk( "acpi: detected %i IOAPICs\n", ioapic_count );
-		ioapics = new processor::ioapic[ioapic_count];
+		ioapics = new( std::nothrow ) processor::ioapic[ioapic_count];
 	}
 	else
 	{
@@ -182,7 +184,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 			case MADTEntryType::kLAPIC:
 			{
 				auto desc   = ( madt_lapic_entry* )entry;
-				auto lapic  = new processor::lapic( desc->apic_id, lapic_base );
+				auto lapic  = new( std::nothrow ) processor::lapic( desc->apic_id, lapic_base );
 				
 				processor::core::instance( desc->processor_id - core_base )->lapic = lapic;
 				log::printk( "acpi: detected LAPIC %d for processor %d\n",

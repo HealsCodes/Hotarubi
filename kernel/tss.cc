@@ -1,6 +1,6 @@
 /*******************************************************************************
 
-    Copyright (C) 2014  René 'Shirk' Köcher
+    Copyright (C) 2014,2015  René 'Shirk' Köcher
  
     This file is part of Hotarubi.
 
@@ -21,6 +21,7 @@
 
 /* TSS manipulation */
 
+#include <new>
 #include <string.h>
 
 #include <hotarubi/tss.h>
@@ -48,7 +49,7 @@ init( void )
 	else
 	{
 		/* AP - allocate dynamically */
-		tss = new struct tss;
+		tss = new( std::nothrow ) struct tss;
 	}
 
 	memset( tss, 0, sizeof( struct tss ) );

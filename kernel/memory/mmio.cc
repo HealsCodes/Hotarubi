@@ -1,6 +1,6 @@
 /*******************************************************************************
 
-    Copyright (C) 2014  René 'Shirk' Köcher
+    Copyright (C) 2014,2015  René 'Shirk' Köcher
  
     This file is part of Hotarubi.
 
@@ -21,6 +21,7 @@
 
 /* IO-Memory resource management */
 
+#include <new>
 #include <list.h>
 #include <hotarubi/lock.h>
 
@@ -210,7 +211,7 @@ request_region( const char *name, phys_addr_t start, size_t size, Flags flags )
 	}
 	if( request == nullptr )
 	{
-		request = new struct resource;
+		request = new( std::nothrow ) struct resource;
 
 		request->name  = name;
 		request->start = start;

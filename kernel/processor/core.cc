@@ -1,6 +1,6 @@
 /*******************************************************************************
 
-    Copyright (C) 2014  René 'Shirk' Köcher
+    Copyright (C) 2014,2015  René 'Shirk' Köcher
  
     This file is part of Hotarubi.
 
@@ -21,6 +21,7 @@
 
 /* methods dealing directly with the CPU or per-CPU local data */
 
+#include <new>
 #include <string.h>
 
 #include <hotarubi/processor/core.h>
@@ -95,7 +96,7 @@ core::irqs( void )
 {
 	if( _interrupts == nullptr )
 	{
-		_interrupts = new struct interrupt[NUM_IRQ_ENTRIES];
+		_interrupts = new( std::nothrow ) struct interrupt[NUM_IRQ_ENTRIES];
 		for( unsigned i = 0; i < NUM_IRQ_ENTRIES; ++i )
 		{
 			_interrupts[i].setup( i, i );
@@ -208,7 +209,7 @@ init( void )
 		}
 
 		core::current()->lapic->init();
-		_pit = new pit;
+		_pit = new( std::nothrow ) pit;
 		_pit->init();
 	}
 

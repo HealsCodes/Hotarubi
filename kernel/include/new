@@ -1,6 +1,6 @@
 /*******************************************************************************
 
-    Copyright (C) 2014, 2015  René 'Shirk' Köcher
+    Copyright (C) 2015  René 'Shirk' Köcher
  
     This file is part of Hotarubi.
 
@@ -21,60 +21,26 @@
 
 /* C++ new / delete operators */
 
-#include <new>
+#ifndef STD_NEW
+#define STD_NEW 1
 
 #include <hotarubi/types.h>
-#include <hotarubi/memory/kmalloc.h>
 
 namespace std
 {
-	const nothrow_t nothrow{};
+	struct nothrow_t {};
+	extern const nothrow_t nothrow;
 }
 
-void*
-operator new( size_t size, const std::nothrow_t& ) noexcept
-{
-	return kmalloc( size );
-}
+void* operator new( size_t size, const std::nothrow_t& ) noexcept;
+void* operator new( size_t, void *ptr ) noexcept;
 
-void*
-operator new( size_t, void *ptr ) noexcept
-{
-	return ptr;
-}
+void* operator new[]( size_t size, const std::nothrow_t& ) noexcept;
+void* operator new[]( size_t, void *ptr ) noexcept;
 
-void*
-operator new[]( size_t size, const std::nothrow_t& ) noexcept
-{
-	return kmalloc( size );
-}
+void operator delete( void *ptr ) noexcept;
+void operator delete( void*, void* ) noexcept;
+void operator delete[]( void *ptr ) noexcept;
+void operator delete[]( void*, void* ) noexcept;
 
-void*
-operator new[]( size_t, void *ptr ) noexcept
-{
-	return ptr;
-}
-
-void
-operator delete( void *ptr ) noexcept
-{
-	kfree( ptr );
-}
-
-void
-operator delete( void*, void* ) noexcept
-{
-	/* placement delete.. */
-}
-
-void
-operator delete[]( void *ptr ) noexcept
-{
-	kfree( ptr );
-}
-
-void
-operator delete[]( void*, void* ) noexcept
-{
-	/* placement delete */
-}
+#endif
