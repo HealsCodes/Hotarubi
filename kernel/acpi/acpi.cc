@@ -34,6 +34,7 @@
 #include <hotarubi/log/log.h>
 
 #include <new>
+#include <iterators.h>
 
 namespace acpi
 {
@@ -87,6 +88,29 @@ _get_table( const char *signature )
 	return res;
 }
 
+/* iteration support on madt tables */
+static auto madt_add = []( uintptr_t& ptr ) {
+	ptr += ( ( madt_entry* )ptr )->length;
+};
+
+static auto madt_get = []( uintptr_t ptr ) {
+	return ( madt_entry* )ptr;
+};
+
+calc_iter<madt_entry> begin( struct madt& madt )
+{
+	return calc_iter<madt_entry>( madt_add, madt_get, &madt.entries[0] );
+};
+
+calc_iter<madt_entry> end( struct madt& madt )
+{
+	return calc_iter<madt_entry>(
+	  madt_add, madt_get,
+	  ( void * )( ( ( uintptr_t )&madt ) + madt.length ) );
+};
+
+/* ---- */
+
 void
 parse_madt( processor::core *&aps, uint32_t &core_count,
             processor::ioapic *&ioapics, uint32_t &ioapic_count  )
@@ -109,9 +133,9 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 
 	uint32_t lapic_base = 0;
 	uint32_t core_base = 255;
-	auto entry = &madt->entries[0];
+	
 	/* first run: count the system resources */
-	while( ( uintptr_t )entry - ( uintptr_t )madt < madt->length )
+	for( auto entry : *madt )
 	{
 		switch( entry->type )
 		{
@@ -152,7 +176,6 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 			default:
 				break;
 		}
-		entry = ( madt_entry* )( ( uintptr_t )entry + entry->length );
 	}
 
 	if( core_count > 0 )
@@ -176,8 +199,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 
 	/* second run: configure them */
 	ioapic_count = 0;
-	entry = &madt->entries[0];
-	while( ( uintptr_t )entry - ( uintptr_t )madt < madt->length )
+	for( auto entry : *madt )
 	{
 		switch( entry->type )
 		{
@@ -207,7 +229,6 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 			default:
 				break;
 		}
-		entry = ( madt_entry* )( ( uintptr_t )entry + entry->length );
 	}
 
 	for( auto i = 0; i < NUM_IRQ_ENTRIES; ++i )
@@ -223,8 +244,7 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 	}
 
 	/* third run: collect and apply global and lapic nmi overrides */
-	entry = &madt->entries[0];
-	while( ( uintptr_t )entry - ( uintptr_t )madt < madt->length )
+	for( auto entry : *madt )
 	{
 		switch( entry->type )
 		{
@@ -284,14 +304,14 @@ parse_madt( processor::core *&aps, uint32_t &core_count,
 			default:
 				break;
 		}
-		entry = ( madt_entry* )( ( uintptr_t )entry + entry->length );
 	}
 }
 
 void
 init_tables( void )
 {
-	/* locate the rsdp in low mem (reading the EBDA location from BDA:0x40e )*/
+	/* locate the rsdp in low mem (reading the EBDA location from BDA:0x40e ) */
+	/* TODO: this won't work on UEFI */
 	uint8_t *mem = ( uint8_t* )__VA( 0x00000000 );
 
 	log::printk( "Parsing ACPI tables..\n" );
