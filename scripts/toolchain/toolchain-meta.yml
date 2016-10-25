@@ -26,7 +26,7 @@
     - --disable-nls
 
   :gcc:
-    :uri: http://gcc.cybermirror.org/releases/gcc-4.9.4/gcc-4.9.4.tar.bz2
+    :uri: http://ca.mirror.babylon.network/gcc/releases/gcc-4.9.4/gcc-4.9.4.tar.bz2
     :md5: 87c24a4090c1577ba817ec6882602491
     :sha: 6c11d292cd01b294f9f84c9a59c230d80e9e4a47e5c6355f046bb36d4f358092
     :size: 90097606
@@ -64,7 +64,7 @@
     :size: 2196480
 
   :mpfr:
-    :uri: http://www.mpfr.org/mpfr-current/mpfr-3.1.5.tar.bz2
+    :uri: http://www.mpfr.org/mpfr-3.1.5/mpfr-3.1.5.tar.bz2
     :md5: b1d23a55588e3b2a13e3be66bc69fd8d
     :sha: ca498c1c7a74dd37a576f353312d1e68d490978de4395fa28f1cbd46a364e658
     :size: 1279489
