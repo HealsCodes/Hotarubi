@@ -26,10 +26,10 @@
     - --disable-nls
 
   :gcc:
-    :uri: http://gcc.cybermirror.org/releases/gcc-4.9.2/gcc-4.9.2.tar.bz2
-    :md5: 4df8ee253b7f3863ad0b86359cd39c43
-    :sha: 2020c98295856aa13fda0f2f3a4794490757fc24bcca918d52cc8b4917b972dd
-    :size: 89939747
+    :uri: http://gcc.cybermirror.org/releases/gcc-4.9.4/gcc-4.9.4.tar.bz2
+    :md5: 87c24a4090c1577ba817ec6882602491
+    :sha: 6c11d292cd01b294f9f84c9a59c230d80e9e4a47e5c6355f046bb36d4f358092
+    :size: 90097606
     :targets: [ all-gcc, install-strip-gcc, all-target-libgcc, install-target-libgcc ]
     :prepare:
         - /@TOP@/scripts/toolchain/prep-cxx-headers.rb @PREFIX@ @PWD@
@@ -64,10 +64,10 @@
     :size: 2196480
 
   :mpfr:
-    :uri: http://www.mpfr.org/mpfr-current/mpfr-3.1.2.tar.bz2
-    :md5: ee2c3ac63bf0c2359bf08fc3ee094c19
-    :sha: 79c73f60af010a30a5c27a955a1d2d01ba095b72537dab0ecaad57f5a7bb1b6b
-    :size: 1225496
+    :uri: http://www.mpfr.org/mpfr-current/mpfr-3.1.5.tar.bz2
+    :md5: b1d23a55588e3b2a13e3be66bc69fd8d
+    :sha: ca498c1c7a74dd37a576f353312d1e68d490978de4395fa28f1cbd46a364e658
+    :size: 1279489
     :config_flags:
     - --with-gmp=@PREFIX@
     :deps:
